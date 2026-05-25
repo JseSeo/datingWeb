@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Env
+.env
+.env.local
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Uploads (local dev)
+backend/uploads/
+
+# Test DB
+backend/test.db
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Pytest / coverage
+.pytest_cache/
+htmlcov/
+.coverage
