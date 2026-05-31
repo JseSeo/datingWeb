@@ -3,7 +3,9 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user
 from app.database import get_db
+from app.models.survey import Survey
 from app.models.user import User
+from app.schemas.survey import SurveyOut, SurveySubmit
 from app.schemas.user import MatchingPauseUpdate, ProfileUpdate, UserOut
 
 router = APIRouter(prefix="/me", tags=["me"])
@@ -37,3 +39,31 @@ def toggle_matching_pause(
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+@router.get("/survey", response_model=SurveyOut)
+def get_survey(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    survey = db.query(Survey).filter(Survey.user_id == current_user.id).first()
+    if survey is None:
+        return SurveyOut(answers={})
+    return survey
+
+
+@router.put("/survey", response_model=SurveyOut)
+def save_survey(
+    payload: SurveySubmit,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    survey = db.query(Survey).filter(Survey.user_id == current_user.id).first()
+    if survey:
+        survey.answers = payload.answers
+    else:
+        survey = Survey(user_id=current_user.id, answers=payload.answers)
+        db.add(survey)
+    db.commit()
+    db.refresh(survey)
+    return survey
