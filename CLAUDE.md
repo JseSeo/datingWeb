@@ -85,3 +85,18 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 | 매칭 알고리즘 상세 | 팀 회의 후 별도 설계 |
 | 16개 대학 목록 | 팀 내부 선정 |
 | 카카오 알림톡 | 사업자등록 완료 후 연동 |
+
+## 도입 보류: code-review-graph (트리거 시 재검토)
+
+현재 코드탐색은 `smart-explore`(claude-mem 번들, tree-sitter AST, on-demand)로 충분.
+code-review-graph는 영속 그래프 인덱스(관계/영향분석)지만 훅 상시비용 + smart-explore와 중복 → 현 규모선 보류.
+
+**아래 트리거 中 하나라도 뜨면 메인세션이 사용자에게 도입 권고할 것:**
+
+| # | 트리거 | 측정 |
+|---|--------|------|
+| 1 | 소스 파일 수십~수백 개로 증가 | backend `*.py` + frontend `*.tsx/ts` 합산 |
+| 2 | "이거 고치면 어디 깨지나" 영향분석을 세션마다 반복 | cross-file 관계 추적 빈발 |
+| 3 | smart-explore 단독 탐색이 답답 (풀파일 재읽기 잦음) | 체감 |
+
+**발동 시 행동:** ① 친구 원본 가이드의 `.mcp.json` code-review-graph 설정 복사(정확한 서버 커맨드 거기 있음) → ② 1주 켜고 caveman-stats로 smart-explore 대비 토큰 실측 → ③ 절감 확인되면 유지, 아니면 제거.
