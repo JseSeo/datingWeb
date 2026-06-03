@@ -14,12 +14,12 @@
 | Plan 1: 백엔드 기반 | ✅ 완료 (auth, /me, 학생증 업로드, 관리자 승인) |
 | 백엔드: 설문(survey) | ✅ 완료 (2026-06-01, 커밋 `466bba1`) |
 | 백엔드: game (오작교/붉은실) | ⬜ 미착수 |
-| 백엔드: reports (신고) | ⬜ 미착수 |
+| 백엔드: reports (신고) | ✅ 완료 (2026-06-03, `POST /reports`) |
 | 백엔드: match (매칭 실행) | 🚫 금지 — "매칭 알고리즘 설계 시작해" 명령 전까지 |
 | Alembic 초기 마이그레이션 | ⏸️ 보류 (PostgreSQL/Railway 환경 필요) |
 | 프론트엔드 | ⬜ 미착수 (전체) |
 
-**테스트: 28개 전부 통과** (`cd backend; uv run pytest -q`)
+**테스트: 33개 전부 통과** (`cd backend; uv run pytest -q`)
 
 ---
 
@@ -33,6 +33,7 @@ PUT  /me/profile                 ✅
 PUT  /me/matching-pause          ✅
 GET  /me/survey                  ✅  ← 설문 답변 조회 (없으면 빈 {})
 PUT  /me/survey                  ✅  ← 설문 답변 저장 (freeform JSON)
+POST /reports                    ✅  ← 신고 (target_id, reason)
 POST /verification/upload        ✅  ← 학생증 업로드
 GET  /admin/verifications        ✅  ← 관리자: 승인 대기 목록
 POST /admin/verifications/{id}   ✅  ← 관리자: 승인/거절
@@ -45,7 +46,6 @@ POST /game/ojakgyo/invite        ⬜ 추천 링크 생성
 POST /game/ojakgyo/accept        ⬜ 추천 수락 (가입 시)
 POST /game/red-thread            ⬜ 붉은 실 입력
 GET  /game/red-thread/status     ⬜ 상호 입력 여부 확인
-POST /reports                    ⬜ 신고
 POST /admin/match/run            🚫 매칭 실행 (알고리즘 보류)
 GET  /admin/matches              🚫 매칭 결과
 ```
