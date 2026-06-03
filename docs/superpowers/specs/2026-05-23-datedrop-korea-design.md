@@ -55,26 +55,34 @@
 - 확정된 것: 가치관 설문 기반 가중치 매칭 방향
 
 ### 5.3 매칭 확률 수정자 (게임 연동)
-- 오작교 추천 1명 수신 시: +33%
-- 오작교 추천 3명 수신 시: 100% 보장
+- 오작교: 같은 두 사람(쌍)을 지목한 지목자가 1명이면 그 쌍 매칭 확률 +33%
+- 오작교: 같은 쌍을 지목한 지목자가 3명이면 그 쌍 100% 매칭 보장
 - 붉은 실 상호 입력 시: 100% 보장
 - 중복 매칭 방지 로직: 매칭 알고리즘 설계 시 결정
+- (확률 적용은 매칭 알고리즘 영역 — 게임은 지목/입력 저장·집계만 담당)
 
 ---
 
 ## 6. 게임 시스템
 
 ### 6.1 오작교 게임
-- 목적: 신규 유저 유입 (가입 유도)
-- 방식: 기존 유저가 지인에게 추천 링크 발송 → 가입 시 추천인의 매칭 확률 +33%
-- 추천인: 익명 (피추천인에게 비공개)
+- 목적: 지인 중매 — 어울릴 것 같은 두 사람을 이어주기
+- 방식: 유저(지목자)가 제3자로서 두 사람(각각 이름+학교)을 지목 → "이 둘 이어주세요"
+  - 검색 도움 없이 이름+학교를 직접 입력해야 하므로 대부분 지인을 지목하게 됨
+  - 같은 쌍을 지목한 지목자 수가 쌓일수록 그 쌍의 매칭 확률 상승 (§5.3)
+- 지목자: 익명 (지목된 두 사람에게 비공개)
+- 제약: 지목자 본인은 두 사람 어느 쪽에도 넣을 수 없음 / 같은 두 사람을 넣을 수 없음 / 같은 지목자가 같은 쌍을 중복 지목 불가
+- 지목 대상의 가입 여부는 검증하지 않음 (이름+학교 텍스트로만 저장)
 - 반영 시점: 해당 주 정규 매칭에 반영
 
 ### 6.2 붉은 실 게임
 - 목적: 아는 사람과의 확실한 연결
-- 방식: 가입 회원끼리 서로 상대방 이름+학교 입력 → 양쪽 모두 입력 시 100% 매칭
+- 방식: 유저가 이어지고 싶은 상대 1명의 이름+학교를 입력 (1명만, 재입력 시 덮어쓰기)
+  - 입력값은 수정 전까지 화면에 계속 표시됨
+  - 양쪽이 서로를 입력하면 100% 매칭 (매칭 알고리즘 영역 — 보류)
+- 상호 입력 여부는 본인에게 비공개. 매칭 시간에 매칭된 상대로만 결과를 알 수 있음
+- 지목 알림: 붉은 실로 지목당한 유저에게 "나를 지목한 인원수"를 알림으로 표시 (지목자는 익명)
 - 반영 시점: 해당 주 정규 매칭에 반영
-- 단방향 입력 시: 상대방 미입력 상태로 대기 (알림 없음)
 
 ---
 
@@ -118,7 +126,10 @@ MatchRound
   id, scheduled_at, executed_at, status(pending/done)
 
 Ojakgyo (오작교)
-  id, referrer_id, referee_id(nullable -- 미가입이면 null), invite_token, created_at
+  id, recommender_id(지목자, 익명)
+  person_a_name, person_a_university, person_b_name, person_b_university
+  created_at
+  -- unique(recommender_id, 정규화된 쌍): 같은 지목자가 같은 쌍 중복 지목 불가
 
 RedThread (붉은 실)
   id, user_id, target_name, target_university, created_at
@@ -145,10 +156,10 @@ POST /verification/upload         -- 학생증 업로드
 GET  /admin/verifications         -- 관리자: 승인 대기 목록
 POST /admin/verifications/{id}    -- 관리자: 승인/거절
 
-POST /game/ojakgyo/invite         -- 추천 링크 생성
-POST /game/ojakgyo/accept         -- 추천 수락 (가입 시)
-POST /game/red-thread             -- 붉은 실 입력
-GET  /game/red-thread/status      -- 상호 입력 여부 확인
+POST /game/ojakgyo                -- 두 사람(이름+학교) 지목
+POST /game/red-thread             -- 붉은 실 입력/수정 (1명, 덮어쓰기)
+GET  /game/red-thread             -- 내 현재 붉은 실 입력 조회 (화면 표시용)
+GET  /game/red-thread/received    -- 나를 지목한 인원수 조회 (익명)
 
 POST /admin/match/run             -- 관리자: 매칭 실행
 GET  /admin/matches               -- 관리자: 매칭 결과
