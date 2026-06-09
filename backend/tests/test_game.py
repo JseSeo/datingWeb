@@ -225,3 +225,37 @@ def test_red_thread_received_zero(client: TestClient):
 def test_red_thread_received_unauthorized(client: TestClient):
     res = client.get("/game/red-thread/received")
     assert res.status_code == 401
+
+
+def test_ojakgyo_strip_dedup(client: TestClient):
+    headers = _auth(client, "ojstrip@test.com")
+    body1 = {
+        "person_a_name": "가", "person_a_university": "A대",
+        "person_b_name": "나", "person_b_university": "B대",
+    }
+    assert client.post("/game/ojakgyo", json=body1, headers=headers).status_code == 201
+    # 같은 쌍을 앞뒤 공백 붙여 재지목 → strip 후 동일 → 409
+    body2 = {
+        "person_a_name": "  가  ", "person_a_university": " A대 ",
+        "person_b_name": " 나", "person_b_university": "B대 ",
+    }
+    assert client.post("/game/ojakgyo", json=body2, headers=headers).status_code == 409
+
+
+def test_ojakgyo_whitespace_only_field(client: TestClient):
+    headers = _auth(client, "ojws@test.com")
+    res = client.post("/game/ojakgyo", json={
+        "person_a_name": "   ", "person_a_university": "A대",
+        "person_b_name": "나", "person_b_university": "B대",
+    }, headers=headers)
+    assert res.status_code == 400
+
+
+def test_ojakgyo_self_after_strip(client: TestClient):
+    headers = _auth(client, "ojself@test.com", "본인", "서울대학교")
+    # 본인 이름+학교를 공백 붙여 넣어도 strip 후 본인으로 판정 → 400
+    res = client.post("/game/ojakgyo", json={
+        "person_a_name": " 본인 ", "person_a_university": " 서울대학교 ",
+        "person_b_name": "남", "person_b_university": "고려대학교",
+    }, headers=headers)
+    assert res.status_code == 400

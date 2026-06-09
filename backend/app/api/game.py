@@ -30,9 +30,14 @@ def create_ojakgyo(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    a = (payload.person_a_name, payload.person_a_university)
-    b = (payload.person_b_name, payload.person_b_university)
-    me = (current_user.name, current_user.university)
+    a = (payload.person_a_name.strip(), payload.person_a_university.strip())
+    b = (payload.person_b_name.strip(), payload.person_b_university.strip())
+    if not (a[0] and a[1] and b[0] and b[1]):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="이름과 학교를 입력해야 합니다",
+        )
+    me = (current_user.name.strip(), current_user.university.strip())
     if me == a or me == b:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -75,7 +80,7 @@ def submit_red_thread(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    me = (current_user.name, current_user.university)
+    me = (current_user.name.strip(), current_user.university.strip())
     cleaned: list[tuple[str, str]] = []
     seen: set[tuple[str, str]] = set()
     for t in payload.targets:
@@ -126,7 +131,7 @@ def get_red_thread_received(
     current_user: User = Depends(get_current_user),
 ):
     count = db.query(RedThread).filter(
-        RedThread.target_name == current_user.name,
-        RedThread.target_university == current_user.university,
+        RedThread.target_name == current_user.name.strip(),
+        RedThread.target_university == current_user.university.strip(),
     ).count()
     return RedThreadReceivedOut(count=count)
