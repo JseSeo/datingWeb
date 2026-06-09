@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user
@@ -29,10 +29,34 @@ def create_ojakgyo(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    pa, pb = _normalize_pair(
-        payload.person_a_name, payload.person_a_university,
-        payload.person_b_name, payload.person_b_university,
-    )
+    a = (payload.person_a_name, payload.person_a_university)
+    b = (payload.person_b_name, payload.person_b_university)
+    me = (current_user.name, current_user.university)
+    if me == a or me == b:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="본인은 지목 대상에 포함될 수 없습니다",
+        )
+    if a == b:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="서로 다른 두 사람을 지목해야 합니다",
+        )
+
+    pa, pb = _normalize_pair(*a, *b)
+    existing = db.query(Ojakgyo).filter(
+        Ojakgyo.recommender_id == current_user.id,
+        Ojakgyo.person_a_name == pa[0],
+        Ojakgyo.person_a_university == pa[1],
+        Ojakgyo.person_b_name == pb[0],
+        Ojakgyo.person_b_university == pb[1],
+    ).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="이미 지목한 쌍입니다",
+        )
+
     ojakgyo = Ojakgyo(
         recommender_id=current_user.id,
         person_a_name=pa[0], person_a_university=pa[1],
