@@ -30,8 +30,14 @@ class Ojakgyo(Base):
 
 
 class RedThread(Base):
-    """붉은 실: 양쪽이 서로 이름+학교 입력 시 100% 매칭 (확률 적용은 매칭 알고리즘 영역)"""
+    """붉은 실: 유저가 최대 2명까지 이름+학교 입력. 양쪽 상호 입력 시 100% 매칭 (확률 적용은 매칭 알고리즘 영역)"""
     __tablename__ = "red_threads"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "target_name", "target_university",
+            name="uq_red_thread_user_target",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)

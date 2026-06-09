@@ -10,6 +10,7 @@ from app.schemas.game import (
     OjakgyoOut,
     RedThreadSubmit,
     RedThreadOut,
+    RedThreadTargetOut,
     RedThreadReceivedOut,
 )
 
@@ -74,27 +75,40 @@ def submit_red_thread(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    target = (payload.target_name, payload.target_university)
-    if target == (current_user.name, current_user.university):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="본인을 지목할 수 없습니다",
-        )
+    me = (current_user.name, current_user.university)
+    cleaned: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for t in payload.targets:
+        name = t.target_name.strip()
+        univ = t.target_university.strip()
+        if not name or not univ:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="이름과 학교를 입력해야 합니다",
+            )
+        if (name, univ) == me:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="본인을 지목할 수 없습니다",
+            )
+        if (name, univ) in seen:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="같은 상대를 두 번 입력할 수 없습니다",
+            )
+        seen.add((name, univ))
+        cleaned.append((name, univ))
 
-    rt = db.query(RedThread).filter(RedThread.user_id == current_user.id).first()
-    if rt:
-        rt.target_name = payload.target_name
-        rt.target_university = payload.target_university
-    else:
-        rt = RedThread(
-            user_id=current_user.id,
-            target_name=payload.target_name,
-            target_university=payload.target_university,
-        )
-        db.add(rt)
+    # 목록 통째 교체: 기존 전부 삭제 후 재삽입
+    db.query(RedThread).filter(RedThread.user_id == current_user.id).delete()
+    db.add_all([
+        RedThread(user_id=current_user.id, target_name=n, target_university=u)
+        for n, u in cleaned
+    ])
     db.commit()
-    db.refresh(rt)
-    return rt
+    return RedThreadOut(targets=[
+        RedThreadTargetOut(target_name=n, target_university=u) for n, u in cleaned
+    ])
 
 
 @router.get("/red-thread", response_model=RedThreadOut)
@@ -102,10 +116,8 @@ def get_red_thread(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    rt = db.query(RedThread).filter(RedThread.user_id == current_user.id).first()
-    if rt is None:
-        return RedThreadOut()
-    return rt
+    rows = db.query(RedThread).filter(RedThread.user_id == current_user.id).all()
+    return RedThreadOut(targets=rows)
 
 
 @router.get("/red-thread/received", response_model=RedThreadReceivedOut)

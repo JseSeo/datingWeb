@@ -83,49 +83,111 @@ def test_ojakgyo_different_recommender_same_pair_ok(client: TestClient):
     assert client.post("/game/ojakgyo", json=body, headers=h2).status_code == 201
 
 
-def test_red_thread_create(client: TestClient):
-    headers = _auth(client, "rt@test.com")
-    res = client.post("/game/red-thread", json={
-        "target_name": "상대", "target_university": "고려대학교",
-    }, headers=headers)
+def test_red_thread_create_one(client: TestClient):
+    headers = _auth(client, "rt1@test.com")
+    res = client.post("/game/red-thread", json={"targets": [
+        {"target_name": "상대", "target_university": "고려대학교"},
+    ]}, headers=headers)
     assert res.status_code == 200
-    assert res.json()["target_name"] == "상대"
+    targets = res.json()["targets"]
+    assert len(targets) == 1
+    assert targets[0]["target_name"] == "상대"
 
 
-def test_red_thread_overwrite(client: TestClient):
+def test_red_thread_create_two(client: TestClient):
     headers = _auth(client, "rt2@test.com")
-    client.post("/game/red-thread", json={
-        "target_name": "첫", "target_university": "A대",
-    }, headers=headers)
-    res = client.post("/game/red-thread", json={
-        "target_name": "둘째", "target_university": "B대",
-    }, headers=headers)
+    res = client.post("/game/red-thread", json={"targets": [
+        {"target_name": "갑", "target_university": "A대"},
+        {"target_name": "을", "target_university": "B대"},
+    ]}, headers=headers)
     assert res.status_code == 200
-    assert res.json()["target_name"] == "둘째"
-    got = client.get("/game/red-thread", headers=headers)
-    assert got.json()["target_name"] == "둘째"
-    assert got.json()["target_university"] == "B대"
+    assert len(res.json()["targets"]) == 2
+
+
+def test_red_thread_too_many(client: TestClient):
+    headers = _auth(client, "rt3@test.com")
+    res = client.post("/game/red-thread", json={"targets": [
+        {"target_name": "갑", "target_university": "A대"},
+        {"target_name": "을", "target_university": "B대"},
+        {"target_name": "병", "target_university": "C대"},
+    ]}, headers=headers)
+    assert res.status_code == 422
+
+
+def test_red_thread_empty_list(client: TestClient):
+    headers = _auth(client, "rt4@test.com")
+    res = client.post("/game/red-thread", json={"targets": []}, headers=headers)
+    assert res.status_code == 422
 
 
 def test_red_thread_self_forbidden(client: TestClient):
     headers = _auth(client, "rtself@test.com", "본인", "서울대학교")
-    res = client.post("/game/red-thread", json={
-        "target_name": "본인", "target_university": "서울대학교",
-    }, headers=headers)
+    res = client.post("/game/red-thread", json={"targets": [
+        {"target_name": "본인", "target_university": "서울대학교"},
+    ]}, headers=headers)
     assert res.status_code == 400
+
+
+def test_red_thread_duplicate_target_forbidden(client: TestClient):
+    headers = _auth(client, "rtdup@test.com")
+    res = client.post("/game/red-thread", json={"targets": [
+        {"target_name": "같은이", "target_university": "A대"},
+        {"target_name": "같은이", "target_university": "A대"},
+    ]}, headers=headers)
+    assert res.status_code == 400
+
+
+def test_red_thread_strip_whitespace(client: TestClient):
+    headers = _auth(client, "rtstrip@test.com")
+    res = client.post("/game/red-thread", json={"targets": [
+        {"target_name": "  상대  ", "target_university": " 고려대학교 "},
+    ]}, headers=headers)
+    assert res.status_code == 200
+    t = res.json()["targets"][0]
+    assert t["target_name"] == "상대"
+    assert t["target_university"] == "고려대학교"
+
+
+def test_red_thread_whitespace_only_forbidden(client: TestClient):
+    headers = _auth(client, "rtws@test.com")
+    res = client.post("/game/red-thread", json={"targets": [
+        {"target_name": "   ", "target_university": "A대"},
+    ]}, headers=headers)
+    assert res.status_code == 400
+
+
+def test_red_thread_overwrite_replaces_list(client: TestClient):
+    headers = _auth(client, "rtover@test.com")
+    client.post("/game/red-thread", json={"targets": [
+        {"target_name": "갑", "target_university": "A대"},
+        {"target_name": "을", "target_university": "B대"},
+    ]}, headers=headers)
+    res = client.post("/game/red-thread", json={"targets": [
+        {"target_name": "병", "target_university": "C대"},
+    ]}, headers=headers)
+    assert res.status_code == 200
+    got = client.get("/game/red-thread", headers=headers)
+    targets = got.json()["targets"]
+    assert len(targets) == 1
+    assert targets[0]["target_name"] == "병"
 
 
 def test_red_thread_get_empty(client: TestClient):
     headers = _auth(client, "rtempty@test.com")
     res = client.get("/game/red-thread", headers=headers)
     assert res.status_code == 200
-    assert res.json()["target_name"] is None
+    assert res.json()["targets"] == []
 
 
-def test_red_thread_unauthorized(client: TestClient):
-    res = client.post("/game/red-thread", json={
-        "target_name": "x", "target_university": "y",
-    })
+def test_red_thread_post_unauthorized(client: TestClient):
+    res = client.post("/game/red-thread", json={"targets": [
+        {"target_name": "x", "target_university": "y"},
+    ]})
+    assert res.status_code == 401
+
+
+def test_red_thread_get_unauthorized(client: TestClient):
+    res = client.get("/game/red-thread")
     assert res.status_code == 401
 
 
@@ -133,13 +195,24 @@ def test_red_thread_received_count(client: TestClient):
     hb = _auth(client, "target@test.com", "타깃", "성균관대학교")
     h1 = _auth(client, "p1@test.com")
     h2 = _auth(client, "p2@test.com")
-    body = {"target_name": "타깃", "target_university": "성균관대학교"}
-    client.post("/game/red-thread", json=body, headers=h1)
-    client.post("/game/red-thread", json=body, headers=h2)
-
+    body = {"targets": [{"target_name": "타깃", "target_university": "성균관대학교"}]}
+    assert client.post("/game/red-thread", json=body, headers=h1).status_code == 200
+    assert client.post("/game/red-thread", json=body, headers=h2).status_code == 200
     res = client.get("/game/red-thread/received", headers=hb)
     assert res.status_code == 200
     assert res.json()["count"] == 2
+
+
+def test_red_thread_received_counts_distinct_people(client: TestClient):
+    hb = _auth(client, "target2@test.com", "타깃2", "성균관대학교")
+    h1 = _auth(client, "q1@test.com")
+    body = {"targets": [
+        {"target_name": "타깃2", "target_university": "성균관대학교"},
+        {"target_name": "딴사람", "target_university": "B대"},
+    ]}
+    client.post("/game/red-thread", json=body, headers=h1)
+    res = client.get("/game/red-thread/received", headers=hb)
+    assert res.json()["count"] == 1
 
 
 def test_red_thread_received_zero(client: TestClient):
@@ -147,3 +220,8 @@ def test_red_thread_received_zero(client: TestClient):
     res = client.get("/game/red-thread/received", headers=headers)
     assert res.status_code == 200
     assert res.json()["count"] == 0
+
+
+def test_red_thread_received_unauthorized(client: TestClient):
+    res = client.get("/game/red-thread/received")
+    assert res.status_code == 401

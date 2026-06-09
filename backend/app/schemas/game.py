@@ -21,17 +21,24 @@ class OjakgyoOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class RedThreadSubmit(BaseModel):
+class RedThreadTarget(BaseModel):
     target_name: str = Field(min_length=1)
     target_university: str = Field(min_length=1)
 
 
-class RedThreadOut(BaseModel):
-    target_name: str | None = None
-    target_university: str | None = None
-    created_at: datetime | None = None
+class RedThreadSubmit(BaseModel):
+    targets: list[RedThreadTarget] = Field(min_length=1, max_length=2)
+
+
+class RedThreadTargetOut(BaseModel):
+    target_name: str
+    target_university: str
 
     model_config = {"from_attributes": True}
+
+
+class RedThreadOut(BaseModel):
+    targets: list[RedThreadTargetOut]
 
 
 class RedThreadReceivedOut(BaseModel):
