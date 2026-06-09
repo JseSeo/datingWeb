@@ -106,3 +106,15 @@ def get_red_thread(
     if rt is None:
         return RedThreadOut()
     return rt
+
+
+@router.get("/red-thread/received", response_model=RedThreadReceivedOut)
+def get_red_thread_received(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    count = db.query(RedThread).filter(
+        RedThread.target_name == current_user.name,
+        RedThread.target_university == current_user.university,
+    ).count()
+    return RedThreadReceivedOut(count=count)

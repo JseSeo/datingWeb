@@ -127,3 +127,23 @@ def test_red_thread_unauthorized(client: TestClient):
         "target_name": "x", "target_university": "y",
     })
     assert res.status_code == 401
+
+
+def test_red_thread_received_count(client: TestClient):
+    hb = _auth(client, "target@test.com", "타깃", "성균관대학교")
+    h1 = _auth(client, "p1@test.com")
+    h2 = _auth(client, "p2@test.com")
+    body = {"target_name": "타깃", "target_university": "성균관대학교"}
+    client.post("/game/red-thread", json=body, headers=h1)
+    client.post("/game/red-thread", json=body, headers=h2)
+
+    res = client.get("/game/red-thread/received", headers=hb)
+    assert res.status_code == 200
+    assert res.json()["count"] == 2
+
+
+def test_red_thread_received_zero(client: TestClient):
+    headers = _auth(client, "nobody@test.com")
+    res = client.get("/game/red-thread/received", headers=headers)
+    assert res.status_code == 200
+    assert res.json()["count"] == 0
