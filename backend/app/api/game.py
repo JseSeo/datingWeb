@@ -66,3 +66,43 @@ def create_ojakgyo(
     db.commit()
     db.refresh(ojakgyo)
     return ojakgyo
+
+
+@router.post("/red-thread", response_model=RedThreadOut)
+def submit_red_thread(
+    payload: RedThreadSubmit,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    target = (payload.target_name, payload.target_university)
+    if target == (current_user.name, current_user.university):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="본인을 지목할 수 없습니다",
+        )
+
+    rt = db.query(RedThread).filter(RedThread.user_id == current_user.id).first()
+    if rt:
+        rt.target_name = payload.target_name
+        rt.target_university = payload.target_university
+    else:
+        rt = RedThread(
+            user_id=current_user.id,
+            target_name=payload.target_name,
+            target_university=payload.target_university,
+        )
+        db.add(rt)
+    db.commit()
+    db.refresh(rt)
+    return rt
+
+
+@router.get("/red-thread", response_model=RedThreadOut)
+def get_red_thread(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    rt = db.query(RedThread).filter(RedThread.user_id == current_user.id).first()
+    if rt is None:
+        return RedThreadOut()
+    return rt

@@ -81,3 +81,49 @@ def test_ojakgyo_different_recommender_same_pair_ok(client: TestClient):
     }
     assert client.post("/game/ojakgyo", json=body, headers=h1).status_code == 201
     assert client.post("/game/ojakgyo", json=body, headers=h2).status_code == 201
+
+
+def test_red_thread_create(client: TestClient):
+    headers = _auth(client, "rt@test.com")
+    res = client.post("/game/red-thread", json={
+        "target_name": "상대", "target_university": "고려대학교",
+    }, headers=headers)
+    assert res.status_code == 200
+    assert res.json()["target_name"] == "상대"
+
+
+def test_red_thread_overwrite(client: TestClient):
+    headers = _auth(client, "rt2@test.com")
+    client.post("/game/red-thread", json={
+        "target_name": "첫", "target_university": "A대",
+    }, headers=headers)
+    res = client.post("/game/red-thread", json={
+        "target_name": "둘째", "target_university": "B대",
+    }, headers=headers)
+    assert res.status_code == 200
+    assert res.json()["target_name"] == "둘째"
+    got = client.get("/game/red-thread", headers=headers)
+    assert got.json()["target_name"] == "둘째"
+    assert got.json()["target_university"] == "B대"
+
+
+def test_red_thread_self_forbidden(client: TestClient):
+    headers = _auth(client, "rtself@test.com", "본인", "서울대학교")
+    res = client.post("/game/red-thread", json={
+        "target_name": "본인", "target_university": "서울대학교",
+    }, headers=headers)
+    assert res.status_code == 400
+
+
+def test_red_thread_get_empty(client: TestClient):
+    headers = _auth(client, "rtempty@test.com")
+    res = client.get("/game/red-thread", headers=headers)
+    assert res.status_code == 200
+    assert res.json()["target_name"] is None
+
+
+def test_red_thread_unauthorized(client: TestClient):
+    res = client.post("/game/red-thread", json={
+        "target_name": "x", "target_university": "y",
+    })
+    assert res.status_code == 401
