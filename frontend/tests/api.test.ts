@@ -62,4 +62,15 @@ describe("apiFetch", () => {
     await expect(apiFetch("/me")).rejects.toBeInstanceOf(ApiError);
     expect(getToken()).toBeNull();
   });
+
+  it("네트워크 실패 시 status 0 ApiError", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network down"));
+    await expect(apiFetch("/me")).rejects.toMatchObject({ status: 0 });
+  });
+
+  it("204 응답 시 undefined 반환", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 204 }));
+    const result = await apiFetch("/me");
+    expect(result).toBeUndefined();
+  });
 });
