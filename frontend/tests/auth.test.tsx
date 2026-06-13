@@ -57,4 +57,12 @@ describe("useAuth", () => {
     expect(clearSpy).toHaveBeenCalled();
     expect(result.current.user).toBeNull();
   });
+
+  it("마운트 시 토큰 있으면 fetchMe → user 설정", async () => {
+    localStorage.setItem("datedrop_token", "existing-tok");
+    vi.spyOn(api, "fetchMe").mockResolvedValue(fakeUser);
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.user).toEqual(fakeUser);
+  });
 });
