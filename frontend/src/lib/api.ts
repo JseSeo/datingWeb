@@ -79,3 +79,35 @@ export function loginRequest(email: string, password: string): Promise<TokenResp
 export function fetchMe(): Promise<UserOut> {
   return apiFetch<UserOut>("/me", { method: "GET" });
 }
+
+export function updateProfile(data: {
+  bio?: string;
+  instagram?: string;
+  kakao_id?: string;
+  phone?: string;
+}): Promise<UserOut> {
+  return apiFetch<UserOut>("/me/profile", {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export function uploadProfilePhoto(file: File): Promise<UserOut> {
+  const form = new FormData();
+  form.append("file", file);
+  return apiFetch<UserOut>("/me/profile-photo", {
+    method: "POST",
+    body: form,
+  });
+}
+
+export function toggleMatchingPause(paused: boolean): Promise<UserOut> {
+  return apiFetch<UserOut>("/me/matching-pause", {
+    method: "PUT",
+    body: JSON.stringify({ matching_paused: paused }),
+  });
+}
+
+export function withdraw(): Promise<void> {
+  return apiFetch<void>("/me", { method: "DELETE" });
+}

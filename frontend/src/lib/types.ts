@@ -1,4 +1,4 @@
-export type UserStatus = "pending" | "active" | "suspended";
+export type UserStatus = "pending" | "active" | "suspended" | "withdrawn";
 
 export interface UserOut {
   id: number;

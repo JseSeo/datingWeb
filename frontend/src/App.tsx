@@ -4,6 +4,8 @@ import Register from "./pages/Register/Register";
 import Login from "./pages/Login/Login";
 import Pending from "./pages/Pending/Pending";
 import Home from "./pages/Home/Home";
+import MyPage from "./pages/MyPage/MyPage";
+import Profile from "./pages/Profile/Profile";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 export default function App() {
@@ -25,6 +27,22 @@ export default function App() {
         element={
           <ProtectedRoute requireStatus="active">
             <Home />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/mypage"
+        element={
+          <ProtectedRoute>
+            <MyPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <Profile />
           </ProtectedRoute>
         }
       />
