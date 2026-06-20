@@ -38,9 +38,11 @@
 - content-type 검사: `image/jpeg`, `image/png`, `image/webp`만 허용 (아니면 400)
 - 크기 제한 10MB (초과 시 400)
 - `uploads/`에 `{uuid}.{ext}` 저장
-- 기존 `profile_photo` 파일이 있으면 삭제 후 교체
-- `current_user.profile_photo = filepath`, commit
+- 기존 `profile_photo` 파일이 있으면 삭제 후 교체 (디스크 경로는 `os.path.basename`으로 복원)
+- `current_user.profile_photo = f"/uploads/{filename}"` (URL 경로, 슬래시), commit
 - 응답: `UserOut`
+
+서빙: `main.py`에서 `uploads/`를 `/uploads`로 `StaticFiles` 마운트 → 프론트가 `${VITE_API_URL}${profile_photo}`로 `<img>` 로드. verification 이미지(admin 경로 확인만)와 달리 프로필 사진은 브라우저 표시가 필요해 OS 경로 대신 URL 경로로 저장(2026-06-20 결정).
 
 상수(`ALLOWED_CONTENT_TYPES`, `MAX_FILE_SIZE`)는 verification.py와 동일 값. 중복을 피하려면 공용 위치로 뺄 수 있으나, 현 규모에선 me.py에 같은 상수를 두는 것으로 충분(YAGNI). 구현 시 판단.
 

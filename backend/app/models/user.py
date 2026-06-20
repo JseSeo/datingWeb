@@ -9,6 +9,7 @@ class UserStatus(str, enum.Enum):
     pending = "pending"
     active = "active"
     suspended = "suspended"
+    withdrawn = "withdrawn"
 
 
 class User(Base):
