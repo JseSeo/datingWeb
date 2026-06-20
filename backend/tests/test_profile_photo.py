@@ -53,3 +53,22 @@ def test_upload_profile_photo_unauthenticated(client: TestClient):
         files={"file": ("me.jpg", io.BytesIO(b"data"), "image/jpeg")},
     )
     assert response.status_code == 401
+
+
+def test_upload_profile_photo_malicious_filename(client: TestClient):
+    # 경로 조작 시도 — 확장자에 슬래시·.. 섞인 파일명은 jpg로 안전 처리
+    headers = _register_and_get_headers(client, "evil@test.com")
+    response = client.post(
+        "/me/profile-photo",
+        files={"file": (
+            "x.jpg/../../../etc/passwd",
+            io.BytesIO(b"img"),
+            "image/jpeg",
+        )},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    photo = response.json()["profile_photo"]
+    # uploads 밖으로 탈출하는 경로 조각이 남으면 안 됨
+    assert ".." not in photo
+    assert photo.startswith("/uploads/")

@@ -51,3 +51,9 @@
 .rowDisabled { color: #bbb; cursor: not-allowed; }
 .danger { color: var(--color-error); }
 .soon { font-size: 12px; color: #bbb; }
+
+.error {
+  color: var(--color-error);
+  font-size: 14px;
+  text-align: center;
+}

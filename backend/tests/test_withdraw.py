@@ -70,3 +70,22 @@ def test_withdraw_blocks_relogin(client: TestClient):
 def test_withdraw_unauthenticated(client: TestClient):
     response = client.delete("/me")
     assert response.status_code == 401
+
+
+def test_withdrawn_token_cannot_rewrite_profile(client: TestClient):
+    # 탈퇴 후에도 살아있는 토큰으로 익명화된 필드를 되살릴 수 없어야 함
+    headers = _register_and_get_headers(client, "ghost@test.com")
+    client.delete("/me", headers=headers)
+
+    res = client.put("/me/profile", json={"instagram": "back"}, headers=headers)
+    assert res.status_code == 401
+
+    res = client.post(
+        "/me/profile-photo",
+        files={"file": ("me.jpg", io.BytesIO(b"img"), "image/jpeg")},
+        headers=headers,
+    )
+    assert res.status_code == 401
+
+    res = client.get("/me", headers=headers)
+    assert res.status_code == 401

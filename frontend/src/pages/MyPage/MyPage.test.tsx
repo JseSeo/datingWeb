@@ -31,15 +31,26 @@ function renderMyPage() {
 }
 
 describe("MyPage", () => {
-  it("탈퇴 confirm 후 withdraw 호출 + 랜딩 이동", async () => {
+  it("탈퇴 confirm 후 withdraw 호출 + logout + 랜딩 이동", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     const spy = vi.spyOn(api, "withdraw").mockResolvedValue(undefined);
-    const clear = vi.spyOn(api, "clearToken").mockImplementation(() => {});
     renderMyPage();
     fireEvent.click(screen.getByRole("button", { name: /회원 탈퇴/ }));
     await waitFor(() => expect(spy).toHaveBeenCalled());
-    expect(clear).toHaveBeenCalled();
+    expect(logout).toHaveBeenCalled();
     expect(navigate).toHaveBeenCalledWith("/");
+  });
+
+  it("탈퇴 실패 시 에러 표시 + 리다이렉트 안 함", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    vi.spyOn(api, "withdraw").mockRejectedValue(
+      new api.ApiError(500, "서버 오류"),
+    );
+    renderMyPage();
+    fireEvent.click(screen.getByRole("button", { name: /회원 탈퇴/ }));
+    await waitFor(() => expect(screen.getByText("서버 오류")).toBeInTheDocument());
+    expect(logout).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it("탈퇴 confirm 취소 시 withdraw 호출 안 함", () => {

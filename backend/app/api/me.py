@@ -45,9 +45,12 @@ async def upload_profile_photo(
         )
 
     os.makedirs(settings.upload_dir, exist_ok=True)
+    # 확장자는 파일명에서 추출하되 영숫자·5자 이하만 허용 (경로 조작 차단)
     ext = "jpg"
     if file.filename and "." in file.filename:
-        ext = file.filename.rsplit(".", 1)[-1].lower()
+        candidate = file.filename.rsplit(".", 1)[-1].lower()
+        if candidate.isalnum() and len(candidate) <= 5:
+            ext = candidate
     filename = f"{uuid.uuid4()}.{ext}"
     filepath = os.path.join(settings.upload_dir, filename)
     with open(filepath, "wb") as f:

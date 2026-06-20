@@ -32,6 +32,12 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="존재하지 않는 사용자입니다",
         )
+    # 탈퇴 계정은 유효 토큰이 남아있어도 모든 접근 차단 (익명화 후 재기록 방지)
+    if user.status == UserStatus.withdrawn:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="탈퇴한 계정입니다",
+        )
     return user
 
 

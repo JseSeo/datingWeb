@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../lib/auth";
-import { toggleMatchingPause, withdraw, clearToken } from "../../lib/api";
+import { toggleMatchingPause, withdraw, ApiError } from "../../lib/api";
 import styles from "./MyPage.module.css";
 
 const API = import.meta.env.VITE_API_URL;
@@ -17,6 +17,7 @@ export default function MyPage() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [paused, setPaused] = useState(user?.matching_paused ?? false);
+  const [error, setError] = useState("");
 
   async function handlePause() {
     const next = !paused;
@@ -37,8 +38,14 @@ export default function MyPage() {
     if (!window.confirm("정말 탈퇴하시겠어요? 프로필·연락처·설문이 삭제됩니다.")) {
       return;
     }
-    await withdraw();
-    clearToken();
+    setError("");
+    try {
+      await withdraw();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "탈퇴 처리에 실패했습니다");
+      return;
+    }
+    logout(); // 토큰 삭제 + context user 초기화
     navigate("/");
   }
 
@@ -81,6 +88,8 @@ export default function MyPage() {
           <span>회원 탈퇴</span><span>›</span>
         </button>
       </div>
+
+      {error && <p className={styles.error}>{error}</p>}
     </div>
   );
 }
