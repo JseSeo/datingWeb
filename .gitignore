@@ -26,6 +26,7 @@ backend/uploads/
 
 # Test DB
 backend/test.db
+backend/dev.db
 
 # OS
 .DS_Store
