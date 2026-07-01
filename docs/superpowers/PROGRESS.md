@@ -2,7 +2,7 @@
 
 > 세션 재시작 시 컨텍스트가 날아가므로, 작업 상태를 여기 기록한다.
 > 다음 세션 시작 시 이 파일부터 읽으면 이어서 진행 가능.
-> **최종 업데이트: 2026-06-04**
+> **최종 업데이트: 2026-06-09**
 
 ---
 
@@ -13,33 +13,29 @@
 | 설계 스펙 | ✅ 확정 (`specs/2026-05-23-datedrop-korea-design.md`) — 매칭 알고리즘만 보류 |
 | Plan 1: 백엔드 기반 | ✅ 완료 (auth, /me, 학생증 업로드, 관리자 승인) |
 | 백엔드: 설문(survey) | ✅ 완료 (2026-06-01, 커밋 `466bba1`) |
-| 백엔드: game (오작교/붉은실) | 🟡 설계 확정 (2026-06-04, 스펙 §6 갱신) — 구현 대기 |
+| 백엔드: game (오작교/붉은실) | ✅ 완료 (2026-06-09, 브랜치 `feat/game-endpoints`) — 붉은실 최대 2명 재설계 반영 |
 | 백엔드: reports (신고) | ✅ 완료 (2026-06-03, `POST /reports`) |
 | 백엔드: match (매칭 실행) | 🚫 금지 — "매칭 알고리즘 설계 시작해" 명령 전까지 |
 | Alembic 초기 마이그레이션 | ⏸️ 보류 (PostgreSQL/Railway 환경 필요) |
 | 프론트엔드 | ⬜ 미착수 (전체) |
 
-**테스트: 33개 전부 통과** (`cd backend; uv run pytest -q`)
+**테스트: 59개 전부 통과** (`cd backend; uv run pytest -q`)
 
 ---
 
-## ▶ 다음 세션 시작 지점 (game 구현)
+## ▶ 다음 세션 시작 지점
 
-오작교/붉은실 **설계 확정·스펙 갱신·커밋 완료**. 남은 건 구현뿐.
+game 엔드포인트 **구현 완료** (브랜치 `feat/game-endpoints`, 미병합). 다음 후보: 프론트엔드 Plan 2 또는 game 브랜치 병합/PR.
 
-**바로 할 일:** `writing-plans`로 game 구현계획 → TDD 구현.
+게임 구현 결과 요약 (스펙 §6):
+- **오작교** `POST /game/ojakgyo` — 지목자 + 두 사람(이름+학교) 저장, 익명. 본인포함/동일쌍 400, 중복 409(순서무관 정규화). 이름·학교 strip.
+- **붉은실** — `POST /game/red-thread`(최대 2명, 목록 통째 교체, 본인/같은상대 400, 1~2명 422, strip), `GET /game/red-thread`(목록), `GET /game/red-thread/received`(익명 count).
+  - `RedThread` unique(user_id, target_name, target_university) 추가됨.
+- 확률/상호매칭 미적용(매칭 알고리즘 영역 보류).
 
-확정된 설계 요약 (상세는 스펙 §5.3·§6):
-- **오작교** `POST /game/ojakgyo` (active) — 지목자 + 두 사람(이름+학교) 저장, 익명.
-  검증: 본인 ∉ {person_a,b}(400) / person_a≠person_b(400) / 같은 지목자·같은 쌍 중복 409. 쌍 순서무관 정규화. 가입검증 안 함.
-  ⚠️ **`Ojakgyo` 모델 필드 교체 필요**: referrer_id/referee_id/invite_token → recommender_id + person_a_name/university + person_b_name/university.
-- **붉은실** (active):
-  - `POST /game/red-thread` — target(이름+학교) 입력/수정(1명·덮어쓰기). self 400.
-  - `GET /game/red-thread` — 내 현재 입력 조회.
-  - `GET /game/red-thread/received` — 나를 지목한 인원수 `{count:N}` (익명).
-  - `RedThread` 모델 변경 없음 (스펙대로).
-- **공통**: 확률/상호매칭 적용 전부 보류(매칭 알고리즘 영역) — 저장·집계·알림까지만.
-- 모델 필드 교체 시 `app/models/__init__.py` re-export 영향 없음(클래스명 유지).
+⚠️ **운영 전 caveat (코드 리뷰서 식별):**
+- 동시요청 시 붉은실 통째교체 race 가능(기존 Survey upsert와 동일 패턴, unique 제약으로 동일중복은 차단). 운영 전 row-lock 검토.
+- received count 정합 불변식: **모든 쓰기는 strip 거치는 엔드포인트 경유 필수**. 시드/마이그레이션 작성 시 strip 후 저장할 것.
 
 ---
 
@@ -57,15 +53,15 @@ POST /reports                    ✅  ← 신고 (target_id, reason)
 POST /verification/upload        ✅  ← 학생증 업로드
 GET  /admin/verifications        ✅  ← 관리자: 승인 대기 목록
 POST /admin/verifications/{id}   ✅  ← 관리자: 승인/거절
+POST /game/ojakgyo               ✅  ← 두 사람(이름+학교) 지목 중매
+POST /game/red-thread            ✅  ← 붉은 실 입력/수정 (최대 2명, 목록 통째 교체)
+GET  /game/red-thread            ✅  ← 내 붉은 실 목록 조회
+GET  /game/red-thread/received   ✅  ← 나를 지목한 인원수 (익명)
 ```
 
 ## 미구현 엔드포인트 (스펙 §9 기준)
 
 ```
-POST /game/ojakgyo               ⬜ 두 사람(이름+학교) 지목 중매
-POST /game/red-thread            ⬜ 붉은 실 입력/수정 (1명, 덮어쓰기)
-GET  /game/red-thread            ⬜ 내 붉은 실 입력 조회
-GET  /game/red-thread/received   ⬜ 나를 지목한 인원수 (익명)
 POST /admin/match/run            🚫 매칭 실행 (알고리즘 보류)
 GET  /admin/matches              🚫 매칭 결과
 ```
