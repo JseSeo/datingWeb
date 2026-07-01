@@ -251,6 +251,23 @@ def test_ojakgyo_whitespace_only_field(client: TestClient):
     assert res.status_code == 400
 
 
+def test_ojakgyo_name_too_long(client: TestClient):
+    headers = _auth(client, "ojlong@test.com")
+    res = client.post("/game/ojakgyo", json={
+        "person_a_name": "가" * 101, "person_a_university": "A대",
+        "person_b_name": "나", "person_b_university": "B대",
+    }, headers=headers)
+    assert res.status_code == 422
+
+
+def test_red_thread_name_too_long(client: TestClient):
+    headers = _auth(client, "rtlong@test.com")
+    res = client.post("/game/red-thread", json={"targets": [
+        {"target_name": "상" * 101, "target_university": "A대"},
+    ]}, headers=headers)
+    assert res.status_code == 422
+
+
 def test_ojakgyo_self_after_strip(client: TestClient):
     headers = _auth(client, "ojself@test.com", "본인", "서울대학교")
     # 본인 이름+학교를 공백 붙여 넣어도 strip 후 본인으로 판정 → 400

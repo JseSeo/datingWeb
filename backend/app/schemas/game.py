@@ -3,10 +3,10 @@ from pydantic import BaseModel, Field
 
 
 class OjakgyoCreate(BaseModel):
-    person_a_name: str = Field(min_length=1)
-    person_a_university: str = Field(min_length=1)
-    person_b_name: str = Field(min_length=1)
-    person_b_university: str = Field(min_length=1)
+    person_a_name: str = Field(min_length=1, max_length=100)
+    person_a_university: str = Field(min_length=1, max_length=100)
+    person_b_name: str = Field(min_length=1, max_length=100)
+    person_b_university: str = Field(min_length=1, max_length=100)
 
 
 class OjakgyoOut(BaseModel):
@@ -22,8 +22,8 @@ class OjakgyoOut(BaseModel):
 
 
 class RedThreadTarget(BaseModel):
-    target_name: str = Field(min_length=1)
-    target_university: str = Field(min_length=1)
+    target_name: str = Field(min_length=1, max_length=100)
+    target_university: str = Field(min_length=1, max_length=100)
 
 
 class RedThreadSubmit(BaseModel):
