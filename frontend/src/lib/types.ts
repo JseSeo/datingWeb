@@ -27,3 +27,29 @@ export interface RegisterPayload {
   name: string;
   university: string;
 }
+
+export interface OjakgyoCreate {
+  person_a_name: string;
+  person_a_university: string;
+  person_b_name: string;
+  person_b_university: string;
+}
+
+export interface OjakgyoOut extends OjakgyoCreate {
+  id: number;
+  recommender_id: number;
+  created_at: string;
+}
+
+export interface RedThreadTarget {
+  target_name: string;
+  target_university: string;
+}
+
+export interface RedThreadOut {
+  targets: RedThreadTarget[];
+}
+
+export interface RedThreadReceived {
+  count: number;
+}

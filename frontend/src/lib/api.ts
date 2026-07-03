@@ -1,4 +1,13 @@
-import type { TokenResponse, UserOut, RegisterPayload } from "./types";
+import type {
+  TokenResponse,
+  UserOut,
+  RegisterPayload,
+  OjakgyoCreate,
+  OjakgyoOut,
+  RedThreadTarget,
+  RedThreadOut,
+  RedThreadReceived,
+} from "./types";
 
 const BASE = import.meta.env.VITE_API_URL;
 const TOKEN_KEY = "datedrop_token";
@@ -110,4 +119,26 @@ export function toggleMatchingPause(paused: boolean): Promise<UserOut> {
 
 export function withdraw(): Promise<void> {
   return apiFetch<void>("/me", { method: "DELETE" });
+}
+
+export function postOjakgyo(payload: OjakgyoCreate): Promise<OjakgyoOut> {
+  return apiFetch<OjakgyoOut>("/game/ojakgyo", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function postRedThread(targets: RedThreadTarget[]): Promise<RedThreadOut> {
+  return apiFetch<RedThreadOut>("/game/red-thread", {
+    method: "POST",
+    body: JSON.stringify({ targets }),
+  });
+}
+
+export function getRedThread(): Promise<RedThreadOut> {
+  return apiFetch<RedThreadOut>("/game/red-thread", { method: "GET" });
+}
+
+export function getRedThreadReceived(): Promise<RedThreadReceived> {
+  return apiFetch<RedThreadReceived>("/game/red-thread/received", { method: "GET" });
 }
