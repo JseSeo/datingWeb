@@ -13,13 +13,20 @@ build/
 # Node
 node_modules/
 frontend/dist/
+
+# Superpowers brainstorm mockups
+.superpowers/
 frontend/.vite/
+*.tsbuildinfo
+frontend/vite.config.d.ts
+frontend/vite.config.js
 
 # Uploads (local dev)
 backend/uploads/
 
 # Test DB
 backend/test.db
+backend/dev.db
 
 # OS
 .DS_Store
@@ -32,6 +39,7 @@ Thumbs.db
 # Claude Code (개인설정 유출 방지)
 .claude/settings.local.json
 .claude/*.bak
+docs/my-claude-setup.md
 
 # code-review-graph
 .code-review-graph/
