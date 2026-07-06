@@ -39,6 +39,7 @@ Thumbs.db
 # Claude Code (개인설정 유출 방지)
 .claude/settings.local.json
 .claude/*.bak
+docs/my-claude-setup.md
 
 # code-review-graph
 .code-review-graph/
