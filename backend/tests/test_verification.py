@@ -107,3 +107,27 @@ def test_non_admin_cannot_list_verifications(client: TestClient):
     headers = _register_and_get_headers(client, "notadmin@test.com")
     response = client.get("/admin/verifications", headers=headers)
     assert response.status_code == 403
+
+
+def test_get_my_verification_none(client):
+    headers = _register_and_get_headers(client, "noverif@test.com")
+    res = client.get("/me/verification", headers=headers)
+    assert res.status_code == 200
+    assert res.json() is None
+
+
+def test_get_my_verification_after_upload(client):
+    headers = _register_and_get_headers(client, "hasverif@test.com")
+    client.post(
+        "/verification/upload",
+        files={"file": ("s.jpg", io.BytesIO(b"data"), "image/jpeg")},
+        headers=headers,
+    )
+    res = client.get("/me/verification", headers=headers)
+    assert res.status_code == 200
+    assert res.json()["status"] == "pending"
+
+
+def test_get_my_verification_unauthenticated(client):
+    res = client.get("/me/verification")
+    assert res.status_code == 401

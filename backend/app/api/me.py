@@ -13,6 +13,7 @@ from app.models.user import User, UserStatus
 from app.models.verification import StudentVerification
 from app.schemas.survey import SurveyOut, SurveySubmit
 from app.schemas.user import MatchingPauseUpdate, ProfileUpdate, UserOut
+from app.schemas.verification import VerificationOut
 
 router = APIRouter(prefix="/me", tags=["me"])
 
@@ -135,6 +136,18 @@ def toggle_matching_pause(
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+@router.get("/verification", response_model=VerificationOut | None)
+def get_my_verification(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return (
+        db.query(StudentVerification)
+        .filter(StudentVerification.user_id == current_user.id)
+        .first()
+    )
 
 
 @router.get("/survey", response_model=SurveyOut)
