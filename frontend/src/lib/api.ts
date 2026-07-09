@@ -7,6 +7,7 @@ import type {
   RedThreadTarget,
   RedThreadOut,
   RedThreadReceived,
+  VerificationOut,
 } from "./types";
 
 const BASE = import.meta.env.VITE_API_URL;
@@ -141,4 +142,17 @@ export function getRedThread(): Promise<RedThreadOut> {
 
 export function getRedThreadReceived(): Promise<RedThreadReceived> {
   return apiFetch<RedThreadReceived>("/game/red-thread/received", { method: "GET" });
+}
+
+export function getMyVerification(): Promise<VerificationOut | null> {
+  return apiFetch<VerificationOut | null>("/me/verification", { method: "GET" });
+}
+
+export function uploadVerification(file: File): Promise<VerificationOut> {
+  const form = new FormData();
+  form.append("file", file);
+  return apiFetch<VerificationOut>("/verification/upload", {
+    method: "POST",
+    body: form,
+  });
 }
