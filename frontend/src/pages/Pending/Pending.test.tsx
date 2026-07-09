@@ -55,6 +55,8 @@ describe("Pending", () => {
     mock("active", null);
     render(<Pending />);
     await waitFor(() => expect(navigate).toHaveBeenCalledWith("/home"));
+    expect(screen.queryByLabelText("학생증 파일")).toBeNull();
+    expect(screen.queryByText("승인 대기 중")).toBeNull();
   });
 
   it("조회 실패하면 에러 메시지 표시", async () => {

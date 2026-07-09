@@ -31,10 +31,12 @@ export default function Pending() {
           return;
         }
         setVerification(verif);
+        setLoading(false);
       } catch {
-        if (active) setError("정보를 불러오지 못했어요. 다시 시도해주세요.");
-      } finally {
-        if (active) setLoading(false);
+        if (active) {
+          setError("정보를 불러오지 못했어요. 다시 시도해주세요.");
+          setLoading(false);
+        }
       }
     })();
     return () => {
