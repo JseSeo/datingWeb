@@ -17,3 +17,22 @@
   font-size: 15px;
   margin-bottom: 16px;
 }
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  align-items: center;
+}
+
+.preview {
+  max-width: 100%;
+  border-radius: 8px;
+}
+
+.error {
+  color: #d33;
+  font-size: 14px;
+  margin: 0;
+}
