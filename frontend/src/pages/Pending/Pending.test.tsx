@@ -56,4 +56,13 @@ describe("Pending", () => {
     render(<Pending />);
     await waitFor(() => expect(navigate).toHaveBeenCalledWith("/home"));
   });
+
+  it("조회 실패하면 에러 메시지 표시", async () => {
+    vi.spyOn(api, "fetchMe").mockRejectedValue(new Error("network error"));
+    vi.spyOn(api, "getMyVerification").mockResolvedValue(null as never);
+    render(<Pending />);
+    await waitFor(() =>
+      expect(screen.getByText("정보를 불러오지 못했어요. 다시 시도해주세요.")).toBeInTheDocument()
+    );
+  });
 });

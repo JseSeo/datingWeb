@@ -18,18 +18,24 @@ export default function Pending() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [verification, setVerification] = useState<VerificationOut | null>(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     let active = true;
     (async () => {
-      const [me, verif] = await Promise.all([fetchMe(), getMyVerification()]);
-      if (!active) return;
-      if (me.status === "active") {
-        navigate("/home");
-        return;
+      try {
+        const [me, verif] = await Promise.all([fetchMe(), getMyVerification()]);
+        if (!active) return;
+        if (me.status === "active") {
+          navigate("/home");
+          return;
+        }
+        setVerification(verif);
+      } catch {
+        if (active) setError("정보를 불러오지 못했어요. 다시 시도해주세요.");
+      } finally {
+        if (active) setLoading(false);
       }
-      setVerification(verif);
-      setLoading(false);
     })();
     return () => {
       active = false;
@@ -45,6 +51,15 @@ export default function Pending() {
     return (
       <div className={styles.wrap}>
         <p className={styles.desc}>확인 중…</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.wrap}>
+        <p className={styles.error}>{error}</p>
+        <Button onClick={handleLogout}>로그아웃</Button>
       </div>
     );
   }
