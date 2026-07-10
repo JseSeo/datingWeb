@@ -90,8 +90,11 @@ def withdraw(
         .first()
     )
     if verification:
-        if verification.image_url and os.path.exists(verification.image_url):
-            os.remove(verification.image_url)
+        vpath = os.path.join(
+            settings.verification_dir, os.path.basename(verification.image_url)
+        )
+        if os.path.exists(vpath):
+            os.remove(vpath)
         db.delete(verification)
 
     survey = db.query(Survey).filter(Survey.user_id == current_user.id).first()

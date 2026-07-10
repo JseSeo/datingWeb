@@ -37,13 +37,16 @@ async def upload_student_id(
             detail="파일 크기는 10MB 이하여야 합니다",
         )
 
-    # 로컬 저장 (개발용) — 프로덕션은 S3로 교체
-    os.makedirs(settings.upload_dir, exist_ok=True)
+    # 학생증은 비공개 디렉토리에 저장 (정적 mount 안 됨) — 프로덕션은 S3로 교체
+    os.makedirs(settings.verification_dir, exist_ok=True)
+    # 확장자는 파일명에서 추출하되 영숫자·5자 이하만 허용 (경로 조작 차단)
     ext = "jpg"
     if file.filename and "." in file.filename:
-        ext = file.filename.rsplit(".", 1)[-1].lower()
+        candidate = file.filename.rsplit(".", 1)[-1].lower()
+        if candidate.isalnum() and len(candidate) <= 5:
+            ext = candidate
     filename = f"{uuid.uuid4()}.{ext}"
-    filepath = os.path.join(settings.upload_dir, filename)
+    filepath = os.path.join(settings.verification_dir, filename)
     with open(filepath, "wb") as f:
         f.write(contents)
 
@@ -54,14 +57,14 @@ async def upload_student_id(
         .first()
     )
     if verification:
-        verification.image_url = filepath
+        verification.image_url = filename
         verification.status = VerificationStatus.pending
         verification.reviewed_at = None
         verification.reviewed_by = None
     else:
         verification = StudentVerification(
             user_id=current_user.id,
-            image_url=filepath,
+            image_url=filename,
         )
         db.add(verification)
 

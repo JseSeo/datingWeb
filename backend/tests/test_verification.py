@@ -1,5 +1,11 @@
 import io
+import os
+
 from fastapi.testclient import TestClient
+
+from tests.conftest import TestingSessionLocal
+from app.config import settings
+from app.models.verification import StudentVerification
 
 
 def _register_and_get_headers(client: TestClient, email: str) -> dict:
@@ -131,3 +137,28 @@ def test_get_my_verification_after_upload(client):
 def test_get_my_verification_unauthenticated(client):
     res = client.get("/me/verification")
     assert res.status_code == 401
+
+
+def test_upload_stores_in_private_dir_not_public(client: TestClient):
+    headers = _register_and_get_headers(client, "priv@test.com")
+    res = client.post(
+        "/verification/upload",
+        files={"file": ("id.jpg", io.BytesIO(b"secret-id-bytes"), "image/jpeg")},
+        headers=headers,
+    )
+    assert res.status_code == 201
+
+    db = TestingSessionLocal()
+    try:
+        v = db.query(StudentVerification).order_by(StudentVerification.id.desc()).first()
+        filename = v.image_url
+    finally:
+        db.close()
+
+    # DB엔 파일명만 저장 (경로 구분자 없음)
+    assert "/" not in filename
+    assert "\\" not in filename
+    # 비공개 디렉토리에 존재
+    assert os.path.exists(os.path.join(settings.verification_dir, filename))
+    # 공개 uploads 디렉토리엔 없음
+    assert not os.path.exists(os.path.join(settings.upload_dir, filename))
