@@ -22,7 +22,7 @@ const baseUser = {
   matching_paused: false, is_admin: false, created_at: "2026-07-06",
 };
 const verifBase = {
-  id: 1, user_id: 1, image_url: "x",
+  id: 1, user_id: 1,
   reviewed_at: null, created_at: "2026-07-06",
 };
 

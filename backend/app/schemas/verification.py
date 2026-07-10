@@ -6,7 +6,6 @@ from app.models.verification import VerificationStatus
 class VerificationOut(BaseModel):
     id: int
     user_id: int
-    image_url: str
     status: VerificationStatus
     reviewed_at: datetime | None
     created_at: datetime
