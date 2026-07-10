@@ -23,6 +23,7 @@ frontend/vite.config.js
 
 # Uploads (local dev)
 backend/uploads/
+backend/verification_uploads/
 
 # Test DB
 backend/test.db
