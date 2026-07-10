@@ -19,7 +19,7 @@ function selectFile(file: File) {
 }
 
 const okVerif = {
-  id: 1, user_id: 1, image_url: "x", status: "pending" as const,
+  id: 1, user_id: 1, status: "pending" as const,
   reviewed_at: null, created_at: "2026-07-06",
 };
 

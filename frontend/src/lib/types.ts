@@ -59,7 +59,6 @@ export type VerificationStatus = "pending" | "approved" | "rejected";
 export interface VerificationOut {
   id: number;
   user_id: number;
-  image_url: string;
   status: VerificationStatus;
   reviewed_at: string | null;
   created_at: string;
