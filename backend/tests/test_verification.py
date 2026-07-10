@@ -162,3 +162,54 @@ def test_upload_stores_in_private_dir_not_public(client: TestClient):
     assert os.path.exists(os.path.join(settings.verification_dir, filename))
     # 공개 uploads 디렉토리엔 없음
     assert not os.path.exists(os.path.join(settings.upload_dir, filename))
+
+
+def test_upload_response_has_no_image_url(client: TestClient):
+    headers = _register_and_get_headers(client, "noimgurl@test.com")
+    res = client.post(
+        "/verification/upload",
+        files={"file": ("id.jpg", io.BytesIO(b"img"), "image/jpeg")},
+        headers=headers,
+    )
+    assert res.status_code == 201
+    assert "image_url" not in res.json()
+
+
+def test_admin_can_fetch_verification_image(admin_client: TestClient):
+    admin_client.post("/auth/register", json={
+        "email": "imgstudent@test.com",
+        "password": "password123",
+        "name": "학생",
+        "university": "서울대학교",
+    })
+    res = admin_client.post("/auth/login", json={
+        "email": "imgstudent@test.com", "password": "password123"
+    })
+    student_token = res.json()["access_token"]
+    up = admin_client.post(
+        "/verification/upload",
+        files={"file": ("id.jpg", io.BytesIO(b"secret-image"), "image/jpeg")},
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    vid = up.json()["id"]
+
+    img_res = admin_client.get(f"/admin/verifications/{vid}/image")
+    assert img_res.status_code == 200
+    assert img_res.content == b"secret-image"
+
+
+def test_non_admin_cannot_fetch_verification_image(client: TestClient):
+    headers = _register_and_get_headers(client, "notadminimg@test.com")
+    up = client.post(
+        "/verification/upload",
+        files={"file": ("id.jpg", io.BytesIO(b"img"), "image/jpeg")},
+        headers=headers,
+    )
+    vid = up.json()["id"]
+    res = client.get(f"/admin/verifications/{vid}/image", headers=headers)
+    assert res.status_code == 403
+
+
+def test_fetch_missing_verification_image_404(admin_client: TestClient):
+    res = admin_client.get("/admin/verifications/999999/image")
+    assert res.status_code == 404

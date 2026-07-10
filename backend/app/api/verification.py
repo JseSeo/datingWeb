@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -109,3 +110,20 @@ def review_verification(
     db.commit()
     db.refresh(verification)
     return verification
+
+
+@router.get("/admin/verifications/{verification_id}/image")
+def get_verification_image(
+    verification_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    verification = db.get(StudentVerification, verification_id)
+    if not verification:
+        raise HTTPException(status_code=404, detail="Verification not found")
+    filepath = os.path.join(
+        settings.verification_dir, os.path.basename(verification.image_url)
+    )
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="Image not found")
+    return FileResponse(filepath)
