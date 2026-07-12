@@ -11,7 +11,11 @@ from app.core.deps import get_current_user, require_admin
 from app.database import get_db
 from app.models.user import User, UserStatus
 from app.models.verification import StudentVerification, VerificationStatus
-from app.schemas.verification import VerificationAction, VerificationOut
+from app.schemas.verification import (
+    AdminVerificationOut,
+    VerificationAction,
+    VerificationOut,
+)
 
 router = APIRouter(tags=["verification"])
 
@@ -74,16 +78,28 @@ async def upload_student_id(
     return verification
 
 
-@router.get("/admin/verifications", response_model=list[VerificationOut])
+@router.get("/admin/verifications", response_model=list[AdminVerificationOut])
 def list_pending_verifications(
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
 ):
-    return (
+    verifications = (
         db.query(StudentVerification)
         .filter(StudentVerification.status == VerificationStatus.pending)
         .all()
     )
+    return [
+        AdminVerificationOut(
+            id=v.id,
+            user_id=v.user_id,
+            status=v.status,
+            reviewed_at=v.reviewed_at,
+            created_at=v.created_at,
+            name=v.user.name,
+            university=v.user.university,
+        )
+        for v in verifications
+    ]
 
 
 @router.post("/admin/verifications/{verification_id}", response_model=VerificationOut)

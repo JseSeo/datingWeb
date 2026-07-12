@@ -76,6 +76,29 @@ def test_admin_list_verifications(admin_client: TestClient):
     assert data[0]["status"] == "pending"
 
 
+def test_admin_list_includes_name_and_university(admin_client: TestClient):
+    admin_client.post("/auth/register", json={
+        "email": "namestudent@test.com",
+        "password": "password123",
+        "name": "김학생",
+        "university": "연세대학교",
+    })
+    res = admin_client.post("/auth/login", json={
+        "email": "namestudent@test.com", "password": "password123"
+    })
+    student_token = res.json()["access_token"]
+    admin_client.post(
+        "/verification/upload",
+        files={"file": ("id.jpg", io.BytesIO(b"img"), "image/jpeg")},
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+
+    response = admin_client.get("/admin/verifications")
+    assert response.status_code == 200
+    entry = next(e for e in response.json() if e["name"] == "김학생")
+    assert entry["university"] == "연세대학교"
+
+
 def test_admin_approve_verification(admin_client: TestClient):
     admin_client.post("/auth/register", json={
         "email": "approve@test.com",
