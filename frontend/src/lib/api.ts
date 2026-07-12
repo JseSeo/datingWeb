@@ -165,8 +165,8 @@ export function listPendingVerifications(): Promise<AdminVerificationOut[]> {
 export function reviewVerification(
   id: number,
   action: "approve" | "reject",
-): Promise<AdminVerificationOut> {
-  return apiFetch<AdminVerificationOut>(`/admin/verifications/${id}`, {
+): Promise<VerificationOut> {
+  return apiFetch<VerificationOut>(`/admin/verifications/${id}`, {
     method: "POST",
     body: JSON.stringify({ action }),
   });
