@@ -6,3 +6,10 @@ if (typeof URL.createObjectURL === "undefined") {
     writable: true,
   });
 }
+
+if (typeof URL.revokeObjectURL === "undefined") {
+  Object.defineProperty(URL, "revokeObjectURL", {
+    value: () => {},
+    writable: true,
+  });
+}
