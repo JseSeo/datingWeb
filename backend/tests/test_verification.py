@@ -236,3 +236,61 @@ def test_non_admin_cannot_fetch_verification_image(client: TestClient):
 def test_fetch_missing_verification_image_404(admin_client: TestClient):
     res = admin_client.get("/admin/verifications/999999/image")
     assert res.status_code == 404
+
+
+def _upload_as_student(admin_client: TestClient, email: str) -> int:
+    """학생 등록·업로드 후 verification id 반환."""
+    admin_client.post("/auth/register", json={
+        "email": email,
+        "password": "password123",
+        "name": "학생",
+        "university": "서울대학교",
+    })
+    res = admin_client.post("/auth/login", json={
+        "email": email, "password": "password123"
+    })
+    token = res.json()["access_token"]
+    up = admin_client.post(
+        "/verification/upload",
+        files={"file": ("id.jpg", io.BytesIO(b"secret-id"), "image/jpeg")},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    return up.json()["id"]
+
+
+def _verification_filepath(verification_id: int) -> str:
+    db = TestingSessionLocal()
+    try:
+        v = db.get(StudentVerification, verification_id)
+        return os.path.join(settings.verification_dir, v.image_url)
+    finally:
+        db.close()
+
+
+def test_approve_deletes_image_file(admin_client: TestClient):
+    vid = _upload_as_student(admin_client, "approvedel@test.com")
+    filepath = _verification_filepath(vid)
+    assert os.path.exists(filepath)
+
+    res = admin_client.post(f"/admin/verifications/{vid}", json={"action": "approve"})
+    assert res.status_code == 200
+    assert not os.path.exists(filepath)
+
+
+def test_reject_deletes_image_file(admin_client: TestClient):
+    vid = _upload_as_student(admin_client, "rejectdel@test.com")
+    filepath = _verification_filepath(vid)
+    assert os.path.exists(filepath)
+
+    res = admin_client.post(f"/admin/verifications/{vid}", json={"action": "reject"})
+    assert res.status_code == 200
+    assert not os.path.exists(filepath)
+
+
+def test_review_idempotent_when_image_already_gone(admin_client: TestClient):
+    vid = _upload_as_student(admin_client, "idempotent@test.com")
+    filepath = _verification_filepath(vid)
+    os.remove(filepath)  # 파일이 이미 없는 상황 재현
+
+    res = admin_client.post(f"/admin/verifications/{vid}", json={"action": "approve"})
+    assert res.status_code == 200

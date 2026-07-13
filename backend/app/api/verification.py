@@ -125,6 +125,14 @@ def review_verification(
     verification.reviewed_by = admin.id
     db.commit()
     db.refresh(verification)
+
+    # 심사 완료(승인·반려) 시 학생증 이미지 즉시 삭제 (개인정보보호법)
+    filepath = os.path.join(
+        settings.verification_dir, os.path.basename(verification.image_url)
+    )
+    if os.path.exists(filepath):
+        os.remove(filepath)
+
     return verification
 
 
