@@ -13,6 +13,16 @@ class VerificationOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class AdminVerificationOut(BaseModel):
+    id: int
+    user_id: int
+    status: VerificationStatus
+    reviewed_at: datetime | None
+    created_at: datetime
+    name: str
+    university: str
+
+
 class VerificationAction(BaseModel):
     action: str  # "approve" or "reject"
 

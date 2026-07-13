@@ -63,3 +63,13 @@ export interface VerificationOut {
   reviewed_at: string | null;
   created_at: string;
 }
+
+export interface AdminVerificationOut {
+  id: number;
+  user_id: number;
+  status: VerificationStatus;
+  reviewed_at: string | null;
+  created_at: string;
+  name: string;
+  university: string;
+}

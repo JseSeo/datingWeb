@@ -8,6 +8,7 @@ import type {
   RedThreadOut,
   RedThreadReceived,
   VerificationOut,
+  AdminVerificationOut,
 } from "./types";
 
 const BASE = import.meta.env.VITE_API_URL;
@@ -155,4 +156,29 @@ export function uploadVerification(file: File): Promise<VerificationOut> {
     method: "POST",
     body: form,
   });
+}
+
+export function listPendingVerifications(): Promise<AdminVerificationOut[]> {
+  return apiFetch<AdminVerificationOut[]>("/admin/verifications", { method: "GET" });
+}
+
+export function reviewVerification(
+  id: number,
+  action: "approve" | "reject",
+): Promise<VerificationOut> {
+  return apiFetch<VerificationOut>(`/admin/verifications/${id}`, {
+    method: "POST",
+    body: JSON.stringify({ action }),
+  });
+}
+
+export async function fetchVerificationImage(id: number): Promise<string> {
+  const token = getToken();
+  const res = await fetch(`${BASE}/admin/verifications/${id}/image`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (res.status === 401) clearToken();
+  if (!res.ok) throw new ApiError(res.status, "이미지를 불러오지 못했습니다");
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
 }

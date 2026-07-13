@@ -7,6 +7,7 @@ import Home from "./pages/Home/Home";
 import Game from "./pages/Game/Game";
 import MyPage from "./pages/MyPage/MyPage";
 import Profile from "./pages/Profile/Profile";
+import Admin from "./pages/Admin/Admin";
 import MainLayout from "./components/MainLayout/MainLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
@@ -55,6 +56,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <Profile />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute requireAdmin>
+            <Admin />
           </ProtectedRoute>
         }
       />
