@@ -294,3 +294,28 @@ def test_review_idempotent_when_image_already_gone(admin_client: TestClient):
 
     res = admin_client.post(f"/admin/verifications/{vid}", json={"action": "approve"})
     assert res.status_code == 200
+
+
+def test_reupload_deletes_previous_image_file(client: TestClient):
+    headers = _register_and_get_headers(client, "reupload@test.com")
+
+    first = client.post(
+        "/verification/upload",
+        files={"file": ("id1.jpg", io.BytesIO(b"first-image"), "image/jpeg")},
+        headers=headers,
+    )
+    first_path = _verification_filepath(first.json()["id"])
+    assert os.path.exists(first_path)
+
+    second = client.post(
+        "/verification/upload",
+        files={"file": ("id2.jpg", io.BytesIO(b"second-image"), "image/jpeg")},
+        headers=headers,
+    )
+    assert second.status_code == 201
+    second_path = _verification_filepath(second.json()["id"])
+
+    # 새 파일명이 발급되고 옛 파일은 orphan으로 남지 않음
+    assert first_path != second_path
+    assert not os.path.exists(first_path)
+    assert os.path.exists(second_path)

@@ -62,6 +62,12 @@ async def upload_student_id(
         .first()
     )
     if verification:
+        # 재업로드: 옛 학생증 파일이 orphan으로 남지 않도록 먼저 삭제
+        old_path = os.path.join(
+            settings.verification_dir, os.path.basename(verification.image_url)
+        )
+        if os.path.exists(old_path):
+            os.remove(old_path)
         verification.image_url = filename
         verification.status = VerificationStatus.pending
         verification.reviewed_at = None
