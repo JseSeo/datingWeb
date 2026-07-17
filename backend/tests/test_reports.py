@@ -7,6 +7,9 @@ def _register_and_get_headers(client: TestClient, email: str = "reporter@test.co
         "password": "password123",
         "name": "신고자",
         "university": "서울대학교",
+        "agreed_terms": True,
+        "agreed_privacy": True,
+        "agreed_age_14": True,
     })
     res = client.post("/auth/login", json={"email": email, "password": "password123"})
     return {"Authorization": f"Bearer {res.json()['access_token']}"}
@@ -18,6 +21,9 @@ def _register_target(client: TestClient, email: str = "target@test.com") -> int:
         "password": "password123",
         "name": "대상자",
         "university": "서울대학교",
+        "agreed_terms": True,
+        "agreed_privacy": True,
+        "agreed_age_14": True,
     })
     return res.json()["id"]
 
@@ -52,6 +58,9 @@ def test_report_self_forbidden(client: TestClient):
         "password": "password123",
         "name": "자기자신",
         "university": "서울대학교",
+        "agreed_terms": True,
+        "agreed_privacy": True,
+        "agreed_age_14": True,
     })
     res = client.post("/auth/login", json={"email": "self@test.com", "password": "password123"})
     me = client.get("/me", headers={"Authorization": f"Bearer {res.json()['access_token']}"})

@@ -33,6 +33,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, nullable=False
     )
+    terms_agreed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     verification: Mapped["StudentVerification | None"] = relationship(
         "StudentVerification", foreign_keys="StudentVerification.user_id",

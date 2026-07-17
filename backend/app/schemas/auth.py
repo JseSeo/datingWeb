@@ -6,6 +6,9 @@ class RegisterRequest(BaseModel):
     password: str
     name: str
     university: str
+    agreed_terms: bool
+    agreed_privacy: bool
+    agreed_age_14: bool
 
     @field_validator("password")
     @classmethod
