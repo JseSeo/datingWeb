@@ -26,6 +26,9 @@ export interface RegisterPayload {
   password: string;
   name: string;
   university: string;
+  agreed_terms: boolean;
+  agreed_privacy: boolean;
+  agreed_age_14: boolean;
 }
 
 export interface OjakgyoCreate {
