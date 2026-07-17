@@ -354,16 +354,22 @@ state 추가(`submitting` state 아래):
             <input type="checkbox" checked={allAgreed} onChange={toggleAll} />
             전체 동의
           </label>
-          <label>
-            <input type="checkbox" checked={agreedTerms}
-              onChange={(e) => setAgreedTerms(e.target.checked)} />
-            <button type="button" onClick={() => setModal("terms")}>[이용약관]</button> 동의 (필수)
-          </label>
-          <label>
-            <input type="checkbox" checked={agreedPrivacy}
-              onChange={(e) => setAgreedPrivacy(e.target.checked)} />
-            <button type="button" onClick={() => setModal("privacy")}>[개인정보처리방침]</button> 동의 (필수)
-          </label>
+          <div>
+            <label>
+              <input type="checkbox" checked={agreedTerms}
+                onChange={(e) => setAgreedTerms(e.target.checked)} />
+              이용약관 동의 (필수)
+            </label>
+            <button type="button" onClick={() => setModal("terms")}>보기</button>
+          </div>
+          <div>
+            <label>
+              <input type="checkbox" checked={agreedPrivacy}
+                onChange={(e) => setAgreedPrivacy(e.target.checked)} />
+              개인정보처리방침 동의 (필수)
+            </label>
+            <button type="button" onClick={() => setModal("privacy")}>보기</button>
+          </div>
           <label>
             <input type="checkbox" checked={agreedAge}
               onChange={(e) => setAgreedAge(e.target.checked)} />
@@ -383,7 +389,7 @@ state 추가(`submitting` state 아래):
       {modal && <ConsentModal type={modal} onClose={() => setModal(null)} />}
 ```
 
-> 참고: 테스트가 `getByLabelText(/이용약관/)`로 체크박스를 찾으려면 `<label>` 안의 텍스트에 해당 단어가 있어야 함(위 구조 충족). `<button>` 안 `[이용약관]`도 label 텍스트에 포함됨.
+> 중요: 모달 트리거 `<button>`은 반드시 `<label>` **밖**에 둘 것. Testing Library는 label 텍스트 계산 시 중첩된 `<button>` 텍스트를 제거하므로, 트리거를 label 안에 넣으면 `getByLabelText(/이용약관/)`가 체크박스를 못 찾음. label엔 순수 텍스트("이용약관 동의 (필수)")만, 트리거는 형제 `<button>보기</button>`로 분리.
 
 - [ ] **Step 6: 테스트 통과 확인**
 
