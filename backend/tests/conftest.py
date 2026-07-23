@@ -45,6 +45,9 @@ def admin_client(client: TestClient):
         "password": "adminpass123",
         "name": "관리자",
         "university": "서울대학교",
+        "agreed_terms": True,
+        "agreed_privacy": True,
+        "agreed_age_14": True,
     })
     db = TestingSessionLocal()
     from app.models.user import User

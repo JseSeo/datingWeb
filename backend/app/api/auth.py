@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -18,11 +20,17 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
             status_code=status.HTTP_409_CONFLICT,
             detail="이미 사용 중인 이메일입니다",
         )
+    if not (payload.agreed_terms and payload.agreed_privacy and payload.agreed_age_14):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="필수 약관에 동의해야 가입할 수 있습니다",
+        )
     user = User(
         email=payload.email,
         password_hash=hash_password(payload.password),
         name=payload.name,
         university=payload.university,
+        terms_agreed_at=datetime.utcnow(),
     )
     db.add(user)
     db.commit()

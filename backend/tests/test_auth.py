@@ -7,6 +7,9 @@ def test_register_new_user(client: TestClient):
         "password": "password123",
         "name": "김테스트",
         "university": "고려대학교",
+        "agreed_terms": True,
+        "agreed_privacy": True,
+        "agreed_age_14": True,
     })
     assert response.status_code == 201
     data = response.json()
@@ -21,6 +24,9 @@ def test_register_duplicate_email(client: TestClient):
         "password": "password123",
         "name": "김중복",
         "university": "고려대학교",
+        "agreed_terms": True,
+        "agreed_privacy": True,
+        "agreed_age_14": True,
     }
     client.post("/auth/register", json=payload)
     response = client.post("/auth/register", json=payload)
@@ -33,6 +39,9 @@ def test_register_weak_password(client: TestClient):
         "password": "123",
         "name": "김약함",
         "university": "고려대학교",
+        "agreed_terms": True,
+        "agreed_privacy": True,
+        "agreed_age_14": True,
     })
     assert response.status_code == 422
 
@@ -43,6 +52,9 @@ def test_login_success(client: TestClient):
         "password": "password123",
         "name": "김로그인",
         "university": "고려대학교",
+        "agreed_terms": True,
+        "agreed_privacy": True,
+        "agreed_age_14": True,
     })
     response = client.post("/auth/login", json={
         "email": "login@korea.ac.kr",
@@ -60,6 +72,9 @@ def test_login_wrong_password(client: TestClient):
         "password": "password123",
         "name": "김틀림",
         "university": "고려대학교",
+        "agreed_terms": True,
+        "agreed_privacy": True,
+        "agreed_age_14": True,
     })
     response = client.post("/auth/login", json={
         "email": "wrong@korea.ac.kr",
@@ -74,3 +89,41 @@ def test_login_nonexistent_user(client: TestClient):
         "password": "password123",
     })
     assert response.status_code == 401
+
+
+from tests.conftest import TestingSessionLocal
+from app.models.user import User
+
+
+def _full_payload(**overrides):
+    base = {
+        "email": "consent@korea.ac.kr",
+        "password": "password123",
+        "name": "김동의",
+        "university": "고려대학교",
+        "agreed_terms": True,
+        "agreed_privacy": True,
+        "agreed_age_14": True,
+    }
+    base.update(overrides)
+    return base
+
+
+def test_register_records_terms_agreed_at(client: TestClient):
+    res = client.post("/auth/register", json=_full_payload())
+    assert res.status_code == 201
+    db = TestingSessionLocal()
+    user = db.query(User).filter(User.email == "consent@korea.ac.kr").first()
+    assert user.terms_agreed_at is not None
+    db.close()
+
+
+def test_register_rejects_missing_consent(client: TestClient):
+    res = client.post("/auth/register", json=_full_payload(agreed_terms=False))
+    assert res.status_code == 400
+
+
+def test_register_rejects_all_consent_false(client: TestClient):
+    res = client.post("/auth/register", json=_full_payload(
+        agreed_terms=False, agreed_privacy=False, agreed_age_14=False))
+    assert res.status_code == 400
