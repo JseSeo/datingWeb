@@ -7,6 +7,7 @@ def test_register_new_user(client: TestClient):
         "password": "password123",
         "name": "김테스트",
         "university": "고려대학교",
+        "gender": "male",
         "agreed_terms": True,
         "agreed_privacy": True,
         "agreed_age_14": True,
@@ -24,6 +25,7 @@ def test_register_duplicate_email(client: TestClient):
         "password": "password123",
         "name": "김중복",
         "university": "고려대학교",
+        "gender": "male",
         "agreed_terms": True,
         "agreed_privacy": True,
         "agreed_age_14": True,
@@ -39,6 +41,7 @@ def test_register_weak_password(client: TestClient):
         "password": "123",
         "name": "김약함",
         "university": "고려대학교",
+        "gender": "male",
         "agreed_terms": True,
         "agreed_privacy": True,
         "agreed_age_14": True,
@@ -52,6 +55,7 @@ def test_login_success(client: TestClient):
         "password": "password123",
         "name": "김로그인",
         "university": "고려대학교",
+        "gender": "male",
         "agreed_terms": True,
         "agreed_privacy": True,
         "agreed_age_14": True,
@@ -72,6 +76,7 @@ def test_login_wrong_password(client: TestClient):
         "password": "password123",
         "name": "김틀림",
         "university": "고려대학교",
+        "gender": "male",
         "agreed_terms": True,
         "agreed_privacy": True,
         "agreed_age_14": True,
@@ -101,6 +106,7 @@ def _full_payload(**overrides):
         "password": "password123",
         "name": "김동의",
         "university": "고려대학교",
+        "gender": "male",
         "agreed_terms": True,
         "agreed_privacy": True,
         "agreed_age_14": True,
@@ -127,3 +133,45 @@ def test_register_rejects_all_consent_false(client: TestClient):
     res = client.post("/auth/register", json=_full_payload(
         agreed_terms=False, agreed_privacy=False, agreed_age_14=False))
     assert res.status_code == 400
+
+
+def test_register_persists_gender(client: TestClient):
+    res = client.post("/auth/register", json={
+        "email": "gender@korea.ac.kr",
+        "password": "password123",
+        "name": "김성별",
+        "university": "고려대학교",
+        "gender": "female",
+        "agreed_terms": True,
+        "agreed_privacy": True,
+        "agreed_age_14": True,
+    })
+    assert res.status_code == 201
+    assert res.json()["gender"] == "female"
+
+
+def test_register_rejects_missing_gender(client: TestClient):
+    res = client.post("/auth/register", json={
+        "email": "nogender@korea.ac.kr",
+        "password": "password123",
+        "name": "김무성별",
+        "university": "고려대학교",
+        "agreed_terms": True,
+        "agreed_privacy": True,
+        "agreed_age_14": True,
+    })
+    assert res.status_code == 422
+
+
+def test_register_rejects_invalid_gender(client: TestClient):
+    res = client.post("/auth/register", json={
+        "email": "badgender@korea.ac.kr",
+        "password": "password123",
+        "name": "김잘못",
+        "university": "고려대학교",
+        "gender": "other",
+        "agreed_terms": True,
+        "agreed_privacy": True,
+        "agreed_age_14": True,
+    })
+    assert res.status_code == 422

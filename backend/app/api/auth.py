@@ -30,6 +30,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
         password_hash=hash_password(payload.password),
         name=payload.name,
         university=payload.university,
+        gender=payload.gender,
         terms_agreed_at=datetime.utcnow(),
     )
     db.add(user)

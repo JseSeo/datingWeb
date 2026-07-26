@@ -12,6 +12,11 @@ class UserStatus(str, enum.Enum):
     withdrawn = "withdrawn"
 
 
+class Gender(str, enum.Enum):
+    male = "male"
+    female = "female"
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -20,6 +25,9 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     university: Mapped[str] = mapped_column(String(100), nullable=False)
+    gender: Mapped[Gender] = mapped_column(
+        Enum(Gender, name="gender"), nullable=False
+    )
     status: Mapped[UserStatus] = mapped_column(
         Enum(UserStatus, name="user_status"), default=UserStatus.pending, nullable=False
     )

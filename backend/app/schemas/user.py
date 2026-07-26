@@ -8,6 +8,7 @@ class UserOut(BaseModel):
     email: str
     name: str
     university: str
+    gender: str
     status: UserStatus
     profile_photo: str | None
     bio: str | None

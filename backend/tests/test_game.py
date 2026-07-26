@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 def _auth(client: TestClient, email="user@test.com", name="홍길동", university="서울대학교") -> dict:
     client.post("/auth/register", json={
         "email": email, "password": "password123",
-        "name": name, "university": university,
+        "name": name, "university": university, "gender": "male",
         "agreed_terms": True, "agreed_privacy": True, "agreed_age_14": True,
     })
     res = client.post("/auth/login", json={"email": email, "password": "password123"})

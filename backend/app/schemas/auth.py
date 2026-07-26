@@ -1,3 +1,4 @@
+from typing import Literal
 from pydantic import BaseModel, EmailStr, field_validator
 
 
@@ -6,6 +7,7 @@ class RegisterRequest(BaseModel):
     password: str
     name: str
     university: str
+    gender: Literal["male", "female"]
     agreed_terms: bool
     agreed_privacy: bool
     agreed_age_14: bool

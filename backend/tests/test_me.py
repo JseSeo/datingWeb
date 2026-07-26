@@ -7,6 +7,7 @@ def _register_and_get_headers(client: TestClient, email: str = "me@test.com") ->
         "password": "password123",
         "name": "김미",
         "university": "서울대학교",
+        "gender": "male",
         "agreed_terms": True,
         "agreed_privacy": True,
         "agreed_age_14": True,
