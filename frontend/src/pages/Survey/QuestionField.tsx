@@ -68,7 +68,9 @@ export function QuestionField({ question: q, value, onChange }: Props) {
           value={typeof value === "number" ? value : ""}
           onChange={(e) => {
             const v = e.target.value;
-            if (v !== "") onChange(parseInt(v, 10));
+            if (v === "") return;
+            const n = parseInt(v, 10);
+            if (!Number.isNaN(n)) onChange(n);
           }} />
         {q.unit && <span className={styles.unit}>{q.unit}</span>}
       </div>
