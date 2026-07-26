@@ -21,6 +21,19 @@ ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
 
+def _validate_answers(answers: dict) -> None:
+    responses = answers.get("responses")
+    absolute = answers.get("absolute")
+    if not isinstance(responses, dict) or not isinstance(absolute, list):
+        raise HTTPException(status_code=400, detail="설문 형식이 올바르지 않습니다")
+    if not all(isinstance(x, str) for x in absolute):
+        raise HTTPException(status_code=400, detail="절대질문 형식이 올바르지 않습니다")
+    if len(absolute) > 2:
+        raise HTTPException(status_code=400, detail="절대질문은 최대 2개입니다")
+    if any(qid not in responses for qid in absolute):
+        raise HTTPException(status_code=400, detail="절대질문은 응답한 문항만 가능합니다")
+
+
 @router.get("", response_model=UserOut)
 def get_me(current_user: User = Depends(get_current_user)):
     return current_user
@@ -170,6 +183,7 @@ def save_survey(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    _validate_answers(payload.answers)
     survey = db.query(Survey).filter(Survey.user_id == current_user.id).first()
     if survey:
         survey.answers = payload.answers
