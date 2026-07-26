@@ -9,6 +9,8 @@ import type {
   RedThreadReceived,
   VerificationOut,
   AdminVerificationOut,
+  SurveyData,
+  SurveyOut,
 } from "./types";
 
 const BASE = import.meta.env.VITE_API_URL;
@@ -169,6 +171,17 @@ export function reviewVerification(
   return apiFetch<VerificationOut>(`/admin/verifications/${id}`, {
     method: "POST",
     body: JSON.stringify({ action }),
+  });
+}
+
+export function getSurvey(): Promise<SurveyOut> {
+  return apiFetch<SurveyOut>("/me/survey", { method: "GET" });
+}
+
+export function saveSurvey(answers: SurveyData): Promise<SurveyOut> {
+  return apiFetch<SurveyOut>("/me/survey", {
+    method: "PUT",
+    body: JSON.stringify({ answers }),
   });
 }
 

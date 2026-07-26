@@ -78,3 +78,13 @@ export interface AdminVerificationOut {
   name: string;
   university: string;
 }
+
+export interface SurveyData {
+  responses: Record<string, unknown>;
+  absolute: string[];
+}
+
+export interface SurveyOut {
+  answers: SurveyData | Record<string, never>;
+  updated_at: string | null;
+}
