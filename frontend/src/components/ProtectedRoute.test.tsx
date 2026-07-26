@@ -6,6 +6,7 @@ import * as auth from "../lib/auth";
 
 const baseUser = {
   id: 1, email: "a@b.com", name: "테스터", university: "서울대학교",
+  gender: "female" as const,
   status: "active" as const, profile_photo: null, bio: null,
   instagram: null, kakao_id: null, phone: null,
   matching_paused: false, is_admin: false, created_at: "2026-07-06",

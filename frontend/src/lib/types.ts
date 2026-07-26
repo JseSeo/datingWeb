@@ -5,6 +5,7 @@ export interface UserOut {
   email: string;
   name: string;
   university: string;
+  gender: "male" | "female";
   status: UserStatus;
   profile_photo: string | null;
   bio: string | null;
@@ -26,6 +27,7 @@ export interface RegisterPayload {
   password: string;
   name: string;
   university: string;
+  gender: "male" | "female";
   agreed_terms: boolean;
   agreed_privacy: boolean;
   agreed_age_14: boolean;

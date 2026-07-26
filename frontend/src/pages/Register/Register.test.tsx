@@ -23,6 +23,7 @@ function fillFields() {
   fireEvent.change(screen.getByLabelText("비밀번호 (8자 이상)"), { target: { value: "password123" } });
   fireEvent.change(screen.getByLabelText("이름"), { target: { value: "김테스트" } });
   fireEvent.change(screen.getByLabelText("학교"), { target: { value: "서울대학교" } });
+  fireEvent.click(screen.getByLabelText("남"));
 }
 
 describe("Register 동의 게이트", () => {
@@ -36,6 +37,7 @@ describe("Register 동의 게이트", () => {
     fireEvent.click(screen.getByLabelText(/이용약관/));
     fireEvent.click(screen.getByLabelText(/개인정보처리방침/));
     fireEvent.click(screen.getByLabelText(/만 14세 이상/));
+    fireEvent.click(screen.getByLabelText("남"));
     expect(screen.getByRole("button", { name: "가입하기" })).toBeEnabled();
   });
 
@@ -62,8 +64,26 @@ describe("Register 동의 게이트", () => {
     fireEvent.click(screen.getByRole("button", { name: "가입하기" }));
     await waitFor(() => expect(spy).toHaveBeenCalledWith(
       expect.objectContaining({
-        agreed_terms: true, agreed_privacy: true, agreed_age_14: true,
+        agreed_terms: true, agreed_privacy: true, agreed_age_14: true, gender: "male",
       }),
     ));
+  });
+});
+
+describe("Register 성별", () => {
+  it("성별 라디오가 렌더된다", () => {
+    renderRegister();
+    expect(screen.getByLabelText("남")).toBeInTheDocument();
+    expect(screen.getByLabelText("여")).toBeInTheDocument();
+  });
+
+  it("성별 미선택이면 제출 불가", () => {
+    renderRegister();
+    fireEvent.change(screen.getByLabelText("이메일"), { target: { value: "a@b.com" } });
+    fireEvent.change(screen.getByLabelText("비밀번호 (8자 이상)"), { target: { value: "password123" } });
+    fireEvent.change(screen.getByLabelText("이름"), { target: { value: "홍길동" } });
+    fireEvent.change(screen.getByLabelText("학교"), { target: { value: "서울대" } });
+    fireEvent.click(screen.getByLabelText("전체 동의"));
+    expect(screen.getByRole("button", { name: "가입하기" })).toBeDisabled();
   });
 });

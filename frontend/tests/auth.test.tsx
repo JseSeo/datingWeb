@@ -7,6 +7,7 @@ import type { UserOut } from "../src/lib/types";
 
 const fakeUser: UserOut = {
   id: 1, email: "a@b.com", name: "홍길동", university: "테스트대",
+  gender: "female",
   status: "active", profile_photo: null, bio: null, instagram: null,
   kakao_id: null, phone: null, matching_paused: false, is_admin: false,
   created_at: "2026-06-13T00:00:00",

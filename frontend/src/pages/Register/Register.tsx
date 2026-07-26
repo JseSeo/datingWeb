@@ -12,6 +12,7 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [university, setUniversity] = useState("");
+  const [gender, setGender] = useState<"male" | "female" | "">("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [agreedTerms, setAgreedTerms] = useState(false);
@@ -33,6 +34,7 @@ export default function Register() {
     if (password.length < 8) return "비밀번호는 8자 이상이어야 합니다";
     if (!name.trim()) return "이름을 입력하세요";
     if (!university.trim()) return "학교를 입력하세요";
+    if (!gender) return "성별을 선택하세요";
     return "";
   }
 
@@ -45,6 +47,7 @@ export default function Register() {
     try {
       await registerUser({
         email, password, name: name.trim(), university: university.trim(),
+        gender: gender as "male" | "female",
         agreed_terms: agreedTerms, agreed_privacy: agreedPrivacy, agreed_age_14: agreedAge,
       });
       navigate("/login", { state: { registered: true } });
@@ -67,6 +70,17 @@ export default function Register() {
           onChange={(e) => setName(e.target.value)} />
         <Input id="university" label="학교" value={university}
           onChange={(e) => setUniversity(e.target.value)} />
+        <fieldset className={styles.gender}>
+          <legend>성별</legend>
+          <label>
+            <input type="radio" name="gender" checked={gender === "male"}
+              onChange={() => setGender("male")} /> 남
+          </label>
+          <label>
+            <input type="radio" name="gender" checked={gender === "female"}
+              onChange={() => setGender("female")} /> 여
+          </label>
+        </fieldset>
         <fieldset className={styles.consent}>
           <label>
             <input type="checkbox" checked={allAgreed} onChange={toggleAll} />
@@ -96,7 +110,7 @@ export default function Register() {
           <p className={styles.notice}>만 14세 미만은 가입할 수 없습니다</p>
         </fieldset>
         {error && <p className={styles.error}>{error}</p>}
-        <Button type="submit" disabled={submitting || !allAgreed}>
+        <Button type="submit" disabled={submitting || !allAgreed || !gender}>
           {submitting ? "처리 중..." : "가입하기"}
         </Button>
       </form>
