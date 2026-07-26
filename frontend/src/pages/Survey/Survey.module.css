@@ -1,0 +1,14 @@
+.wrap { max-width: 390px; margin: 0 auto; padding: 16px; background: #FFF5E6; }
+.title { font-size: 22px; margin-bottom: 4px; }
+.progress { color: #FF7F5C; font-weight: 600; margin: 0 0 16px; }
+.section { font-size: 18px; border-bottom: 2px solid #FF9472; padding-bottom: 4px; margin: 24px 0 12px; }
+.question { padding: 12px 0; border-bottom: 1px solid #FF9472; }
+.qHead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.qLabel { font-weight: 600; }
+.star { background: none; border: none; font-size: 20px; color: #FF7F5C; cursor: pointer; }
+.star:disabled { opacity: 0.35; cursor: default; }
+.absInfo { color: #FF9472; font-size: 13px; margin-top: 16px; }
+.save { width: 100%; padding: 12px; background: #FF7F5C; color: #fff; border: none; border-radius: 8px; font-size: 16px; margin-top: 8px; }
+.save:disabled { opacity: 0.6; }
+.ok { color: #FF7F5C; font-weight: 600; }
+.err { color: #FF9472; font-weight: 600; }
