@@ -1,72 +1,80 @@
-# 학생증 인증 — 완료 기록 + 다음 작업 (관리자 심사 UI)
+# 학생증 인증 — 완료 기록 + 다음 작업
 
 > **다음 세션 재개 명령:**
 > `RESUME-verification-frontend.md 읽고 이어서`
 
-**최종: 2026-07-11**
-**상태: ✅ 학생증 업로드(PR #3) + ✅ 이미지 비공개화(PR #4) 둘 다 main 머지됨. 다음 = 관리자 심사 UI (미착수)**
+**최종: 2026-07-17**
+**상태: ✅ 학생증 인증 전부 완료·머지됨 (업로드 PR#3 · 비공개화 PR#4 · 심사 UI PR#5 · 이미지삭제 PR#6 · 재업로드 orphan수정 PR#7). ✅ Task B(가입 동의 체크박스) 완료 → PR#8 (미머지, 리뷰대기).**
 
 ---
 
-## ✅ 완료 (전부 main)
+## ✅ 완료 — Task B: 가입 동의 체크박스 (법적, 스펙 §10) → PR#8
 
-### 기능 1 — 학생증 인증 업로드 (PR #3)
-| Task | 내용 | 커밋 |
-|------|------|------|
-| 1 | 백엔드 `GET /me/verification` | 4aa230c |
-| 2 | 프론트 타입 + API (FormData) | 42b0cd9 |
-| 3 | UploadForm (클라검증·미리보기·에러) | e430313 |
-| 4 | Pending 상태기계 (마운트1회조회, active→홈) | 142241a |
-| fix | try/catch 에러화면 · active 깜빡임 제거 | 6c23019, dd422d0 |
+**결정: 서버 기록 방식** (개보법 §22 입증책임 — 클라 게이트만으론 동의 입증 불가).
+- 스펙: `docs/superpowers/specs/2026-07-17-signup-consent-design.md`
+- 플랜: `docs/superpowers/plans/2026-07-17-signup-consent.md`
 
-### 기능 2 — 학생증 이미지 비공개화 (PR #4, main=f313a01 이후)
-개인정보 노출 두 겹 제거:
-1. API 응답의 서버 파일경로/파일명 노출 제거.
-2. 무인증 정적 서빙(`/uploads`) 차단 → 관리자 전용 인증 엔드포인트.
+**구현 (브랜치 `feat/signup-consent`, decea02..2aeac4a):**
+- 백엔드(7a3f521): RegisterRequest 동의 3필드(agreed_terms/privacy/age_14) 필수 + register 검증(400) + User.terms_agreed_at nullable + alembic 마이그레이션. 기존 register 호출 21곳 수정. 86 pass.
+- 프론트(e4ebbd3): 전체동의+3체크박스+14세고지, 버튼 게이트, placeholder ConsentModal. 58 pass, tsc+build clean.
+- 최종 리뷰(opus): Ready to merge, Critical/Important 0.
 
-| 변경 | 커밋 |
+**후속(비차단):**
+- 실제 약관/방침 문안 = 팀/변호사 몫 → 확정 시 ConsentModal placeholder 교체
+- 동의블록 CSS 미정의(무스타일), 모달 a11y(Esc/focus-trap/aria-label)
+- 관찰(기존 gap): alembic versions에 users CREATE 마이그레이션 없음 → fresh DB `upgrade head` 부트스트랩 불가. prod 전 팀 인지
+
+---
+
+## ✅ 학생증 인증 — 완료 (전부 main 머지됨)
+
+---
+
+## ✅ 완료 (main 머지됨)
+
+| 기능 | PR |
+|------|-----|
+| 학생증 업로드 (백엔드 `GET /me/verification` + UploadForm + Pending 상태기계) | PR #3 |
+| 이미지 비공개화 (API 파일경로 제거 + 무인증 정적서빙 차단 → 관리자 전용 엔드포인트) | PR #4 |
+| 관리자 학생증 심사 UI (백엔드 AdminVerificationOut + 프론트 타입/API + requireAdmin 게이트 + 심사페이지) | PR #5 (main d13279e) |
+
+---
+
+## 🟡 승인/반려 시 이미지 삭제 (구현완료, 미머지)
+
+**브랜치: `feat/verification-image-deletion`**
+- 스펙: `docs/superpowers/specs/2026-07-13-verification-image-deletion-design.md`
+
+| 커밋 | 내용 |
 |------|------|
-| 학생증을 비공개 `verification_dir`로 분리 + 확장자 sanitize | 945a759 |
-| `VerificationOut` image_url 제거 + `GET /admin/verifications/{id}/image` | 77f3ac8 |
-| 프론트 `VerificationOut` 타입 image_url 제거 | 4df74ca |
-| `.gitignore`에 `backend/verification_uploads/` | f313a01 |
+| 198c598 | docs: 설계 스펙 |
+| 40d8b23 | fix: 심사 완료 시 이미지 삭제 + 테스트 3개 |
 
-- 스펙: `docs/superpowers/specs/2026-07-10-verification-image-privacy-design.md`
-- 계획: `docs/superpowers/plans/2026-07-10-verification-image-privacy.md`
-- 테스트: 백엔드 78/78 · 프론트 41/41 · build clean.
+**구현:** `review_verification`(backend/app/api/verification.py) — 승인·반려 commit 후 `verification_dir` 이미지 파일 삭제. 존재 체크로 멱등. `image_url` 필드는 유지(파일명 dangling, API 미노출).
+**검증:** 백엔드 82/82 pass (79 + 신규 3: 승인삭제·반려삭제·멱등). TDD RED→GREEN 확인됨.
 
----
-
-## ⬜ 다음 작업 — 관리자 학생증 심사 UI (프로덕션 필수 #2)
-
-프론트 `/admin` 화면 없음. 백엔드는 준비됨. **새 기능 → brainstorming부터 시작할 것.**
-
-### 준비된 백엔드 엔드포인트 (`backend/app/api/verification.py`)
-| 엔드포인트 | 용도 | 권한 |
-|-----------|------|------|
-| `GET /admin/verifications` | pending 목록 | require_admin |
-| `POST /admin/verifications/{id}` `{action:"approve"\|"reject"}` | 승인/반려 (approve 시 user active로) | require_admin |
-| `GET /admin/verifications/{id}/image` | 학생증 이미지 (FileResponse) | require_admin |
-
-### ⚠️ brainstorming에서 먼저 풀어야 할 설계 걸림돌 (이미 조사됨)
-- **A. 이미지 표시 = 인증 fetch 필요.** 이미지 엔드포인트는 Bearer 토큰 요구. `<img src=...>`는 Authorization 헤더 안 붙어 안 뜸. → blob fetch(헤더 포함) 후 `URL.createObjectURL` 방식 필요. (`api.ts`의 `apiFetch`는 JSON 전용 → blob용 별도 함수 필요.)
-- **B. 목록에 신원정보 없음.** `GET /admin/verifications` 응답 = `{id, user_id, status, reviewed_at, created_at}`뿐. 심사하려면 **이름·대학**(주장 신원 대조) 필요. → 백엔드 응답 확장(user name/university 포함) 스코프에 넣을지 결정 필요. **UI만으로는 불충분.**
-
-### 프론트 기존 패턴 (조사됨)
-- 라우팅: `App.tsx` react-router, `ProtectedRoute(requireStatus)`. **is_admin 게이트 아직 없음** — `/admin` 라우트는 `user.is_admin` 체크 추가 필요.
-- `UserOut.is_admin: boolean` 존재 (`types.ts:15`).
-- API: `lib/api.ts` `apiFetch<T>` 헬퍼 + 엔드포인트별 함수 (admin 함수 미존재).
-- 디자인 토큰: `frontend/CLAUDE.md` (크림 #FFF5E6, 코랄 #FF7F5C). 임의 색상 금지.
-- 페이지 폴더구조 `src/pages/`, 각 페이지 `.test.tsx` 동반 (TDD).
+### ⬜ 다음 = 브랜치 마무리
+`finishing-a-development-branch` 스킬 → PR 생성(지금까지 방식). **git = 사용자 허락 필수.**
 
 ---
 
-## 참고
-- 백엔드 없으면 null 반환(404 아님). 승인 감지 = 마운트 1회 조회(폴링 없음).
-- 비차단 Minor (기능1 리뷰 지적): UploadForm blob `revokeObjectURL` 없음 / `accept="image/*"` 넓음 / `messageFor` approved 분기 도달불가.
-- **매칭 알고리즘 = "설계 시작해" 명령 전까지 금지.**
+## ⬜ 후속 이슈 후보 (비차단)
+
+**심사 UI 브랜치(PR#5) Minor:**
+| # | 항목 |
+|---|------|
+| f | Admin 카드에 `created_at`(제출일) 미표시 — 스펙엔 있으나 plan 누락 |
+| g | "학생증 보기" 로딩상태 없음 + 이중클릭 시 objectURL 누수 |
+| c/e | fetchImage 401분기·승인반려 실패경로·busy disable 무테스트 |
+| a | 백엔드 목록 N+1 (스케일 시 `joinedload(StudentVerification.user)`) |
+
+**이미지 삭제 브랜치 범위 밖:**
+- 재업로드(upsert) 시 이전 파일 orphan 누수 — 기존 별도 버그. 정리하려면 upload upsert 시 옛 파일 삭제 추가 필요.
+
+---
 
 ## 환경 메모
 - 백엔드 테스트: `cd backend && uv run pytest -v`
-- 프론트: `cd frontend && npm run test` / `npm run build`
+- 프론트: `cd frontend && npm run test` / `npm run build` / `npx tsc --noEmit`
 - git(머지/push/PR) = 사용자 허락 필수.
+- **매칭 알고리즘 = "설계 시작해" 명령 전까지 금지.**
