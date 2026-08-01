@@ -85,6 +85,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 | 매칭 알고리즘 상세 | 팀 회의 후 별도 설계 |
 | 16개 대학 목록 | 팀 내부 선정 |
 | 카카오 알림톡 | 사업자등록 완료 후 연동 |
+| 관리자 신고 조회 | **관리자 페이지 작업 시 필수.** 신고 제출만 구현됨(`GET /admin/reports` + Admin 목록 없음) → 신고를 읽을 방법이 없음. 설계: `specs/2026-08-02-report-suggestion-design.md` §7 |
 
 ## 도입 보류: code-review-graph (트리거 시 재검토)
 
