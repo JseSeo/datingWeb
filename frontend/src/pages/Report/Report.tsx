@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { submitReport, ApiError } from "../../lib/api";
 import { Input } from "../../components/Input/Input";
 import { Button } from "../../components/Button/Button";
@@ -6,6 +7,7 @@ import type { ReportType } from "../../lib/types";
 import styles from "./Report.module.css";
 
 export default function Report() {
+  const navigate = useNavigate();
   const [type, setType] = useState<ReportType | "">("");
   const [targetName, setTargetName] = useState("");
   const [targetUniversity, setTargetUniversity] = useState("");
@@ -45,6 +47,8 @@ export default function Report() {
 
   return (
     <div className={styles.wrap}>
+      <button type="button" className={styles.back} aria-label="마이페이지로 돌아가기"
+        onClick={() => navigate("/mypage")}>‹ 마이페이지로 돌아가기</button>
       <h1 className={styles.title}>신고 &amp; 건의</h1>
       <form onSubmit={handleSubmit}>
         <fieldset className={styles.type}>

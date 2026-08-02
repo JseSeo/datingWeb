@@ -3,6 +3,14 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import Report from "./Report";
 import * as api from "../../lib/api";
 
+const navigate = vi.fn();
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>(
+    "react-router-dom",
+  );
+  return { ...actual, useNavigate: () => navigate };
+});
+
 beforeEach(() => vi.clearAllMocks());
 
 const HINT = /대상을 특정할 수 있는 정보/;
@@ -11,6 +19,12 @@ describe("Report", () => {
   it("초기 상태: 유형 미선택이면 제출 버튼 비활성", () => {
     render(<Report />);
     expect(screen.getByRole("button", { name: "제출" })).toBeDisabled();
+  });
+
+  it("뒤로 버튼 클릭 시 /mypage 이동", () => {
+    render(<Report />);
+    fireEvent.click(screen.getByRole("button", { name: "마이페이지로 돌아가기" }));
+    expect(navigate).toHaveBeenCalledWith("/mypage");
   });
 
   it("신고 선택 시 대상 입력칸 + 안내문 노출", () => {
