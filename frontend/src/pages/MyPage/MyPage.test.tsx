@@ -53,6 +53,12 @@ describe("MyPage", () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
+  it("가치관 설문 클릭 시 /survey 이동", () => {
+    renderMyPage();
+    fireEvent.click(screen.getByRole("button", { name: /가치관 설문/ }));
+    expect(navigate).toHaveBeenCalledWith("/survey");
+  });
+
   it("탈퇴 confirm 취소 시 withdraw 호출 안 함", () => {
     vi.spyOn(window, "confirm").mockReturnValue(false);
     const spy = vi.spyOn(api, "withdraw");

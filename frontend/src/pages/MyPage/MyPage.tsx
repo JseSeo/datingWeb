@@ -68,9 +68,9 @@ export default function MyPage() {
         <button className={styles.row} onClick={() => navigate("/profile")}>
           <span>프로필 수정</span><span>›</span>
         </button>
-        <div className={`${styles.row} ${styles.rowDisabled}`}>
-          <span>가치관 설문</span><span className={styles.soon}>준비중</span>
-        </div>
+        <button className={styles.row} onClick={() => navigate("/survey")}>
+          <span>가치관 설문</span><span>›</span>
+        </button>
       </div>
 
       <div className={styles.card}>

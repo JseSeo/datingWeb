@@ -49,7 +49,7 @@ PUT  /me/profile                 ✅
 PUT  /me/matching-pause          ✅
 GET  /me/survey                  ✅  ← 설문 답변 조회 (없으면 빈 {})
 PUT  /me/survey                  ✅  ← 설문 답변 저장 (freeform JSON)
-POST /reports                    ✅  ← 신고 (target_id, reason)
+POST /reports                    ✅  ← 신고·건의 (type, target_name, target_university, reason)
 POST /verification/upload        ✅  ← 학생증 업로드
 GET  /admin/verifications        ✅  ← 관리자: 승인 대기 목록
 POST /admin/verifications/{id}   ✅  ← 관리자: 승인/거절
