@@ -140,7 +140,10 @@ RedThread (붉은 실)
   -- target_name·target_university 는 strip 후 저장
 
 Report
-  id, reporter_id, target_id, reason, created_at
+  id, reporter_id, type, target_name, target_university, reason, created_at
+  -- type = report | suggestion
+  -- 건의(suggestion)는 target_name·target_university = null
+  -- target_name·target_university 는 strip 후 저장
 ```
 
 ---
@@ -169,7 +172,7 @@ GET  /game/red-thread/received    -- 나를 지목한 인원수 조회 (익명)
 POST /admin/match/run             -- 관리자: 매칭 실행
 GET  /admin/matches               -- 관리자: 매칭 결과
 
-POST /reports                     -- 신고
+POST /reports                     -- 신고 · 건의 (type으로 구분)
 ```
 
 ---

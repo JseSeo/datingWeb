@@ -9,6 +9,7 @@ import Survey from "./pages/Survey/Survey";
 import MyPage from "./pages/MyPage/MyPage";
 import Profile from "./pages/Profile/Profile";
 import Admin from "./pages/Admin/Admin";
+import Report from "./pages/Report/Report";
 import MainLayout from "./components/MainLayout/MainLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
@@ -65,6 +66,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <Profile />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/report"
+        element={
+          <ProtectedRoute>
+            <Report />
           </ProtectedRoute>
         }
       />

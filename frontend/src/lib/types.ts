@@ -88,3 +88,21 @@ export interface SurveyOut {
   answers: SurveyData | Record<string, never>;
   updated_at: string | null;
 }
+
+export type ReportType = "report" | "suggestion";
+
+export interface ReportPayload {
+  type: ReportType;
+  target_name: string | null;
+  target_university: string | null;
+  reason: string;
+}
+
+export interface ReportOut {
+  id: number;
+  type: ReportType;
+  target_name: string | null;
+  target_university: string | null;
+  reason: string;
+  created_at: string;
+}

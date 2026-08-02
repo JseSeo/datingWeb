@@ -66,4 +66,10 @@ describe("MyPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /회원 탈퇴/ }));
     expect(spy).not.toHaveBeenCalled();
   });
+
+  it("신고 & 건의 클릭 시 /report 이동", () => {
+    renderMyPage();
+    fireEvent.click(screen.getByRole("button", { name: /신고 & 건의/ }));
+    expect(navigate).toHaveBeenCalledWith("/report");
+  });
 });
