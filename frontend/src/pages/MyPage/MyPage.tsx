@@ -84,6 +84,9 @@ export default function MyPage() {
         <button className={styles.row} onClick={handleLogout}>
           <span>로그아웃</span><span>›</span>
         </button>
+        <button className={styles.row} onClick={() => navigate("/report")}>
+          <span>신고 &amp; 건의</span><span>›</span>
+        </button>
         <button className={`${styles.row} ${styles.danger}`} onClick={handleWithdraw}>
           <span>회원 탈퇴</span><span>›</span>
         </button>
