@@ -5,6 +5,30 @@
   background: #FFF5E6;
   min-height: 100vh;
 }
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  max-width: 390px;
+  margin: 0 auto 16px;
+  padding: 0 16px;
+}
+
+.tab {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: transparent;
+  border-bottom: 2px solid transparent;
+  color: #999;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tabActive {
+  color: #FF7F5C;
+  border-bottom-color: #FF7F5C;
+}
 .title {
   font-size: 20px;
   font-weight: 700;
