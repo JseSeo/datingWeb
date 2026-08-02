@@ -78,6 +78,30 @@ def test_report_blank_reason(client: TestClient):
     assert response.json()["detail"] == "내용을 입력하세요"
 
 
+def test_report_empty_reason(client: TestClient):
+    headers = _register_and_get_headers(client, "r5@test.com")
+    response = client.post("/reports", json={
+        "type": "report",
+        "target_name": "대상자",
+        "target_university": "연세대학교",
+        "reason": "",
+    }, headers=headers)
+    assert response.status_code == 400
+    assert response.json()["detail"] == "내용을 입력하세요"
+
+
+def test_report_requires_target_name(client: TestClient):
+    headers = _register_and_get_headers(client, "r6@test.com")
+    response = client.post("/reports", json={
+        "type": "report",
+        "target_name": "   ",
+        "target_university": "연세대학교",
+        "reason": "이름을 안 적음",
+    }, headers=headers)
+    assert response.status_code == 400
+    assert response.json()["detail"] == "신고 대상의 이름과 학교를 입력하세요"
+
+
 def test_report_self_forbidden(client: TestClient):
     headers = _register_and_get_headers(
         client, "self@test.com", name="자기자신", university="고려대학교",

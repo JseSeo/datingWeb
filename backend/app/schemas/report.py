@@ -8,7 +8,7 @@ class ReportCreate(BaseModel):
     type: ReportType
     target_name: str | None = Field(default=None, max_length=100)
     target_university: str | None = Field(default=None, max_length=100)
-    reason: str = Field(min_length=1, max_length=2000)
+    reason: str = Field(max_length=2000)
 
 
 class ReportOut(BaseModel):
