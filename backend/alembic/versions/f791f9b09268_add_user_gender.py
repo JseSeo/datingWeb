@@ -20,11 +20,15 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
+    # op.add_column 은 Enum 의 before_create 이벤트를 발생시키지 않아
+    # PostgreSQL 에서 CREATE TYPE 이 누락된다. 명시적으로 먼저 생성한다.
+    gender = sa.Enum("male", "female", name="gender")
+    gender.create(op.get_bind(), checkfirst=True)
     op.add_column(
         "users",
         sa.Column(
             "gender",
-            sa.Enum("male", "female", name="gender"),
+            gender,
             nullable=False,
             server_default="male",
         ),
