@@ -13,6 +13,7 @@ import type {
   SurveyOut,
   ReportPayload,
   ReportOut,
+  AdminReportOut,
 } from "./types";
 
 const BASE = import.meta.env.VITE_API_URL;
@@ -203,4 +204,15 @@ export function submitReport(payload: ReportPayload): Promise<ReportOut> {
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export function listReports(includeHandled = false): Promise<AdminReportOut[]> {
+  return apiFetch<AdminReportOut[]>(
+    `/admin/reports?include_handled=${includeHandled}`,
+    { method: "GET" },
+  );
+}
+
+export function markReportHandled(id: number): Promise<AdminReportOut> {
+  return apiFetch<AdminReportOut>(`/admin/reports/${id}/handle`, { method: "POST" });
 }
