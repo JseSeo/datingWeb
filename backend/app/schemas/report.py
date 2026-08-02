@@ -20,3 +20,15 @@ class ReportOut(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class AdminReportOut(BaseModel):
+    id: int
+    type: ReportType
+    target_name: str | None
+    target_university: str | None
+    reason: str
+    created_at: datetime
+    handled: bool
+    reporter_name: str
+    reporter_university: str
