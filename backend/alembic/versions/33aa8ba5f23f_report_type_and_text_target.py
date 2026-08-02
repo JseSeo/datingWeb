@@ -20,10 +20,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
+    report_type = sa.Enum("report", "suggestion", name="report_type")
+    report_type.create(op.get_bind(), checkfirst=True)
     with op.batch_alter_table("reports") as batch_op:
-        batch_op.add_column(
-            sa.Column("type", sa.Enum("report", "suggestion", name="report_type"), nullable=False)
-        )
+        batch_op.add_column(sa.Column("type", report_type, nullable=False))
         batch_op.add_column(sa.Column("target_name", sa.String(length=100), nullable=True))
         batch_op.add_column(
             sa.Column("target_university", sa.String(length=100), nullable=True)
