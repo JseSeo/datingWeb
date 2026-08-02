@@ -11,6 +11,8 @@ import type {
   AdminVerificationOut,
   SurveyData,
   SurveyOut,
+  ReportPayload,
+  ReportOut,
 } from "./types";
 
 const BASE = import.meta.env.VITE_API_URL;
@@ -194,4 +196,11 @@ export async function fetchVerificationImage(id: number): Promise<string> {
   if (!res.ok) throw new ApiError(res.status, "이미지를 불러오지 못했습니다");
   const blob = await res.blob();
   return URL.createObjectURL(blob);
+}
+
+export function submitReport(payload: ReportPayload): Promise<ReportOut> {
+  return apiFetch<ReportOut>("/reports", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
