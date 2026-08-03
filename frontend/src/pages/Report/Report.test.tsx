@@ -16,6 +16,13 @@ beforeEach(() => vi.clearAllMocks());
 const HINT = /대상을 특정할 수 있는 정보/;
 
 describe("Report", () => {
+  it("작성자 정보 전달 고지 문구 노출", () => {
+    render(<Report />);
+    expect(
+      screen.getByText("작성 내용과 작성자 정보는 관리자에게 전달됩니다"),
+    ).toBeInTheDocument();
+  });
+
   it("초기 상태: 유형 미선택이면 제출 버튼 비활성", () => {
     render(<Report />);
     expect(screen.getByRole("button", { name: "제출" })).toBeDisabled();

@@ -62,6 +62,7 @@ export default function Report() {
               onChange={() => selectType("suggestion")} /> 건의
           </label>
         </fieldset>
+        <p className={styles.hint}>작성 내용과 작성자 정보는 관리자에게 전달됩니다</p>
 
         {isReport && (
           <>

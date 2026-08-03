@@ -173,6 +173,8 @@ POST /admin/match/run             -- 관리자: 매칭 실행
 GET  /admin/matches               -- 관리자: 매칭 결과
 
 POST /reports                     -- 신고 · 건의 (type으로 구분)
+GET  /admin/reports               -- 관리자: 신고·건의 목록 (기본 미처리만)
+POST /admin/reports/{id}/handle   -- 관리자: 처리 완료 표시
 ```
 
 ---

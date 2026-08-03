@@ -5,6 +5,30 @@
   background: #FFF5E6;
   min-height: 100vh;
 }
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  max-width: 390px;
+  margin: 0 auto 16px;
+  padding: 0 16px;
+}
+
+.tab {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: transparent;
+  border-bottom: 2px solid transparent;
+  color: #999;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tabActive {
+  color: #FF7F5C;
+  border-bottom-color: #FF7F5C;
+}
 .title {
   font-size: 20px;
   font-weight: 700;
@@ -36,4 +60,38 @@
 }
 .error {
   color: #FF7F5C;
+}
+
+.filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #FF7F5C;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.when {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 8px;
+}
+
+.reason {
+  white-space: pre-wrap;
+  margin: 0 0 12px;
+}
+
+.card[data-handled="true"] {
+  opacity: 0.5;
 }

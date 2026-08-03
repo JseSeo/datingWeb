@@ -1,6 +1,6 @@
 import enum
 from datetime import datetime
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
 
@@ -21,6 +21,7 @@ class Report(Base):
     target_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     target_university: Mapped[str | None] = mapped_column(String(100), nullable=True)
     reason: Mapped[str] = mapped_column(Text, nullable=False)
+    handled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, nullable=False
     )

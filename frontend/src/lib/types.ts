@@ -106,3 +106,15 @@ export interface ReportOut {
   reason: string;
   created_at: string;
 }
+
+export interface AdminReportOut {
+  id: number;
+  type: ReportType;
+  target_name: string | null;
+  target_university: string | null;
+  reason: string;
+  created_at: string;
+  handled: boolean;
+  reporter_name: string;
+  reporter_university: string;
+}
