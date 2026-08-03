@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { listReports, markReportHandled } from "../../lib/api";
 import type { AdminReportOut } from "../../lib/types";
+import { formatKST } from "../../lib/datetime";
 import { Button } from "../../components/Button/Button";
 import styles from "./Admin.module.css";
 
@@ -69,7 +70,7 @@ export default function ReportTab() {
             {r.type === "report" ? "신고자" : "작성자"}: {r.reporter_name} ·{" "}
             {r.reporter_university}
           </div>
-          <div className={styles.when}>{r.created_at}</div>
+          <div className={styles.when}>{formatKST(r.created_at)}</div>
           <p className={styles.reason}>{r.reason}</p>
           {!r.handled && <Button onClick={() => handle(r.id)}>처리 완료</Button>}
         </div>
