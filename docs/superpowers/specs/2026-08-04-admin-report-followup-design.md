@@ -63,7 +63,7 @@ PR #12 전체-브랜치 리뷰에서 "머지 후 처리"로 분류된 Minor 9건
 |---|---|---|
 | 1 | M4 | `backend/tests/test_admin_reports.py` |
 | 2 | M3 | `frontend/src/lib/datetime.ts` (신규), `frontend/src/lib/datetime.test.ts` (신규), `ReportTab.tsx`, `ReportTab.test.tsx` |
-| 3 | M1+M8 | `Admin.tsx`, `VerificationTab.tsx`, `Admin.test.tsx` |
+| 3 | M1+M8 | `Admin.tsx`, `Admin.module.css`, `VerificationTab.tsx`, `Admin.test.tsx` |
 
 프로젝트 규칙(`superpowers:test-driven-development` 우선)에 따라 각 커밋은 실패하는 테스트를 먼저 쓰고 구현한다.
 
@@ -119,6 +119,7 @@ export function formatKST(iso: string): string
 |---|---|---|
 | UTC → KST, 날짜 넘어감 | `2026-08-03T17:01:59.776396` | `2026-08-04 02:01` |
 | 이미 `Z` 붙은 입력 (중복 방지) | `2026-08-03T17:01:59Z` | `2026-08-04 02:01` |
+| offset 붙은 입력 (이중 변환 방지) | `2026-08-03T17:01:59+09:00` | `2026-08-03 17:01` |
 | 자정 경계 | `2026-08-03T15:00:00` | `2026-08-04 00:00` |
 | 잘못된 입력 | `어제` | `어제` (원문 반환) |
 
@@ -134,13 +135,16 @@ export function formatKST(iso: string): string
 
 ### 6.1 변경
 
-- **`Admin.tsx`**: `<h1 className={styles.title}>관리자</h1>` 추가. `.title` 클래스는 `Admin.module.css`에 이미 존재하므로 신규 CSS 없음
+- **`Admin.tsx`**: `<h1 className={styles.title}>관리자</h1>` 추가
+- **`Admin.module.css` `.title` 수정**: 현재 `.title`은 `font-size`/`font-weight`/`margin-bottom`만 지정한다. `.wrap`(`max-width: 390px` + `padding: 24px 16px`) 안에 있을 때만 정렬이 맞는 상태다. h1이 `.wrap` 밖으로 올라가므로 `.tabs`와 동일한 폭·여백을 직접 지정해야 화면 왼쪽 끝에 붙지 않는다
 - **`VerificationTab.tsx:99`**: `<h1 className={styles.title}>학생증 심사</h1>` 삭제
-- **`Admin.tsx` 탭 바**: `role="tablist"`, 각 버튼에 `role="tab"` + `aria-selected`, 탭 내용 래퍼에 `role="tabpanel"` + `id`/`aria-controls` 한 쌍
+- **`Admin.tsx` 탭 바**: `role="tablist"`, 각 버튼에 `role="tab"` + `aria-selected` + `id`, 탭 내용 래퍼에 `role="tabpanel"` + `aria-labelledby`(해당 탭의 `id`를 가리킴)
 
 ### 6.2 ARIA 범위 판단
 
-**포함:** `tablist` / `tab` / `aria-selected` / `tabpanel` + `aria-controls` 연결
+**포함:** `tablist` / `tab` / `aria-selected` / `tabpanel` + `aria-labelledby` 연결
+
+**`aria-controls`를 쓰지 않는 이유:** 선택되지 않은 탭 패널은 삼항 렌더로 DOM에서 아예 제거된다. 탭 버튼에 `aria-controls`를 달면 존재하지 않는 id를 가리키게 된다. 패널 → 탭 방향의 `aria-labelledby`만 쓰면 항상 실재하는 id를 가리킨다.
 
 **제외:** 좌우 화살표 키보드 이동, 로빙 tabindex
 
@@ -158,7 +162,7 @@ export function formatKST(iso: string): string
 | 항목 | 기대 |
 |---|---|
 | `cd backend && uv run pytest` | 108 passed (기존 106 + 2) |
-| `cd frontend && npm run test` | 신규 5개 (datetime 4 + ReportTab 날짜 1), Admin ARIA 단언 추가 |
+| `cd frontend && npm run test` | 108 passed (기존 100 + datetime 5 + ReportTab 날짜 1 + Admin 2) |
 | `npx tsc --noEmit` | 무에러 |
 | `npm run build` | 성공 |
 | 브라우저 `/admin` | h1 "관리자" 1개, 신고 카드 날짜가 `2026-08-04 02:01` 꼴 |
