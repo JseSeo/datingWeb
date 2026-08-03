@@ -40,11 +40,19 @@ describe("Admin", () => {
 
     expect(verification).toHaveAttribute("aria-selected", "true");
     expect(report).toHaveAttribute("aria-selected", "false");
+    expect(screen.getByRole("tabpanel")).toHaveAttribute(
+      "aria-labelledby",
+      "tab-verification",
+    );
 
     fireEvent.click(report);
     await waitFor(() =>
       expect(report).toHaveAttribute("aria-selected", "true"),
     );
     expect(verification).toHaveAttribute("aria-selected", "false");
+    expect(screen.getByRole("tabpanel")).toHaveAttribute(
+      "aria-labelledby",
+      "tab-report",
+    );
   });
 });

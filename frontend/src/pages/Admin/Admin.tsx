@@ -34,11 +34,11 @@ export default function Admin() {
         </button>
       </div>
       {tab === "verification" ? (
-        <div role="tabpanel" aria-labelledby="tab-verification">
+        <div role="tabpanel" aria-labelledby="tab-verification" tabIndex={0}>
           <VerificationTab />
         </div>
       ) : (
-        <div role="tabpanel" aria-labelledby="tab-report">
+        <div role="tabpanel" aria-labelledby="tab-report" tabIndex={0}>
           <ReportTab />
         </div>
       )}
