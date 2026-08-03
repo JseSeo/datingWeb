@@ -10,9 +10,13 @@ export default function Admin() {
 
   return (
     <div>
-      <div className={styles.tabs}>
+      <h1 className={styles.title}>관리자</h1>
+      <div className={styles.tabs} role="tablist">
         <button
           type="button"
+          role="tab"
+          id="tab-verification"
+          aria-selected={tab === "verification"}
           className={tab === "verification" ? `${styles.tab} ${styles.tabActive}` : styles.tab}
           onClick={() => setTab("verification")}
         >
@@ -20,13 +24,24 @@ export default function Admin() {
         </button>
         <button
           type="button"
+          role="tab"
+          id="tab-report"
+          aria-selected={tab === "report"}
           className={tab === "report" ? `${styles.tab} ${styles.tabActive}` : styles.tab}
           onClick={() => setTab("report")}
         >
           신고 · 건의
         </button>
       </div>
-      {tab === "verification" ? <VerificationTab /> : <ReportTab />}
+      {tab === "verification" ? (
+        <div role="tabpanel" aria-labelledby="tab-verification">
+          <VerificationTab />
+        </div>
+      ) : (
+        <div role="tabpanel" aria-labelledby="tab-report">
+          <ReportTab />
+        </div>
+      )}
     </div>
   );
 }

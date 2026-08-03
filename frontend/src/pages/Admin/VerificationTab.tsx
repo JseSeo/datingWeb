@@ -96,7 +96,6 @@ export default function VerificationTab() {
 
   return (
     <div className={styles.wrap}>
-      <h1 className={styles.title}>학생증 심사</h1>
       {loading && <p>불러오는 중…</p>}
       {error && <p className={styles.error}>{error}</p>}
       {!loading && !error && items.length === 0 && <p>심사 대기 없음</p>}
