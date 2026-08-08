@@ -60,6 +60,15 @@ describe("ReportTab", () => {
     await waitFor(() => expect(spy).toHaveBeenCalledWith(true));
   });
 
+  it("작성 시각을 KST로 변환해 표시", async () => {
+    vi.spyOn(api, "listReports").mockResolvedValue([report]);
+    render(<ReportTab />);
+    // 목데이터 created_at 은 UTC 2026-08-03T14:30:00 → KST 23:30
+    await waitFor(() =>
+      expect(screen.getByText("2026-08-03 23:30")).toBeInTheDocument(),
+    );
+  });
+
   it("로드 실패 시 에러 문구", async () => {
     vi.spyOn(api, "listReports").mockRejectedValue(new Error("fail"));
     render(<ReportTab />);

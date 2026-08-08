@@ -131,3 +131,17 @@ def test_list_forbidden_for_normal_user(client: TestClient):
 def test_list_unauthorized(client: TestClient):
     res = client.get("/admin/reports")
     assert res.status_code == 401
+
+
+def test_handle_forbidden_for_normal_user(client: TestClient):
+    headers = _reporter_headers(client, "normal2@test.com")
+    report_id = _make_report(client, headers)
+    res = client.post(f"/admin/reports/{report_id}/handle", headers=headers)
+    assert res.status_code == 403
+
+
+def test_handle_unauthorized(client: TestClient):
+    headers = _reporter_headers(client, "normal3@test.com")
+    report_id = _make_report(client, headers)
+    res = client.post(f"/admin/reports/{report_id}/handle")
+    assert res.status_code == 401

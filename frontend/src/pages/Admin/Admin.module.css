@@ -30,9 +30,11 @@
   border-bottom-color: #FF7F5C;
 }
 .title {
+  max-width: 390px;
+  margin: 0 auto 16px;
+  padding: 0 16px;
   font-size: 20px;
   font-weight: 700;
-  margin-bottom: 16px;
 }
 .card {
   border: 1px solid #FF9472;
