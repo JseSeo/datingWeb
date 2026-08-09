@@ -10,9 +10,12 @@ export default function Game() {
 
   return (
     <div>
-      <div className={styles.tabs}>
+      <div className={styles.tabs} role="tablist">
         <button
           type="button"
+          role="tab"
+          id="tab-ojakgyo"
+          aria-selected={tab === "ojakgyo"}
           className={tab === "ojakgyo" ? `${styles.tab} ${styles.tabActive}` : styles.tab}
           onClick={() => setTab("ojakgyo")}
         >
@@ -20,13 +23,24 @@ export default function Game() {
         </button>
         <button
           type="button"
+          role="tab"
+          id="tab-redthread"
+          aria-selected={tab === "redthread"}
           className={tab === "redthread" ? `${styles.tab} ${styles.tabActive}` : styles.tab}
           onClick={() => setTab("redthread")}
         >
           붉은실
         </button>
       </div>
-      {tab === "ojakgyo" ? <OjakgyoTab /> : <RedThreadTab />}
+      {tab === "ojakgyo" ? (
+        <div role="tabpanel" aria-labelledby="tab-ojakgyo" tabIndex={0}>
+          <OjakgyoTab />
+        </div>
+      ) : (
+        <div role="tabpanel" aria-labelledby="tab-redthread" tabIndex={0}>
+          <RedThreadTab />
+        </div>
+      )}
     </div>
   );
 }
