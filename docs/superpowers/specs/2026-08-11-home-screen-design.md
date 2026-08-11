@@ -185,3 +185,4 @@ uv run pytest
 
 - **라운드 관리 기능** — 생성·수정·삭제·실행. 이게 없으면 홈은 실서비스에서 계속 빈 상태다. 다음 우선순위 후보
 - `/admin` 하단 빈 스크롤 제거(`Admin.module.css`의 `min-height: 100vh` 삭제)가 브라우저 육안 확인이 안 된 채 main에 있다. 이번에 `npm run dev`를 띄울 때 함께 확인한다
+- 라운드 관리 기능을 만들 때 `match_rounds.scheduled_at`은 반드시 UTC-naive로 저장해야 한다. 프론트는 타임존 접미사 없는 `scheduled_at`을 UTC로 간주하고(`frontend/src/lib/datetime.ts:44`, `formatKST`와 동일 규칙), 백엔드 조회 쿼리도 naive `datetime.utcnow()`와 비교한다. KST로 저장하면 필터링과 D-day가 조용히 9시간씩 밀린다

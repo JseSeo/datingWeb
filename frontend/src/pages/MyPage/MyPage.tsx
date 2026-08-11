@@ -15,7 +15,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 export default function MyPage() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const [paused, setPaused] = useState(user?.matching_paused ?? false);
   const [error, setError] = useState("");
 
@@ -24,6 +24,7 @@ export default function MyPage() {
     setPaused(next);
     try {
       await toggleMatchingPause(next);
+      await refreshUser();
     } catch {
       setPaused(!next); // 실패 롤백
     }

@@ -86,7 +86,17 @@ describe("Home", () => {
     expect(await screen.findByText(/매칭 참여 중/)).toBeInTheDocument();
   });
 
-  it("라운드 조회만 실패해도 참여 상태는 표시", async () => {
+  it("일시정지 + 설문 미완이면 두 안내가 함께 뜨고 참여 중은 안 뜸", async () => {
+    currentUser = { ...user, matching_paused: true };
+    vi.spyOn(api, "getNextRound").mockResolvedValue(null);
+    vi.spyOn(api, "getSurvey").mockResolvedValue(SURVEY_EMPTY);
+    renderHome();
+    expect(await screen.findByText("⚠ 설문을 아직 안 했어요")).toBeInTheDocument();
+    expect(screen.getByText("⏸ 매칭 일시정지 중")).toBeInTheDocument();
+    expect(screen.queryByText(/매칭 참여 중/)).toBeNull();
+  });
+
+  it("라운드 조회만 실패해도 설문 안내는 표시", async () => {
     vi.spyOn(api, "getNextRound").mockRejectedValue(new api.ApiError(500, "서버 오류"));
     vi.spyOn(api, "getSurvey").mockResolvedValue(SURVEY_EMPTY);
     renderHome();
