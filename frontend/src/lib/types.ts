@@ -118,3 +118,8 @@ export interface AdminReportOut {
   reporter_name: string;
   reporter_university: string;
 }
+
+export interface MatchRoundOut {
+  id: number;
+  scheduled_at: string;
+}

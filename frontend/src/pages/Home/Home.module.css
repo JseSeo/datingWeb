@@ -1,0 +1,64 @@
+.wrap { padding-top: 24px; }
+
+.title {
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 28px 20px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.dday {
+  font-size: 40px;
+  font-weight: bold;
+  color: var(--color-primary);
+  line-height: 1.2;
+}
+
+.when {
+  font-size: 14px;
+  color: var(--color-text);
+  margin-top: 8px;
+}
+
+.empty { font-size: 16px; font-weight: bold; }
+.muted { font-size: 13px; color: #666; margin-top: 6px; }
+.error { font-size: 14px; color: var(--color-error); }
+
+.status { display: flex; flex-direction: column; gap: 12px; }
+
+.notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.noticeText { font-size: 14px; }
+
+.cta {
+  flex-shrink: 0;
+  font-size: 13px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: var(--color-primary);
+  color: #fff;
+  cursor: pointer;
+}
+
+.ok {
+  font-size: 14px;
+  color: #666;
+  text-align: center;
+  padding: 8px 0;
+}
