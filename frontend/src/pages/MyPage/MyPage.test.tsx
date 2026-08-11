@@ -96,4 +96,19 @@ describe("MyPage", () => {
     );
     expect(refreshUser).not.toHaveBeenCalled();
   });
+
+  it("저장 성공 후 refreshUser가 실패해도 롤백하지 않음", async () => {
+    vi.spyOn(api, "toggleMatchingPause").mockResolvedValue({
+      ...user,
+      gender: "female",
+    });
+    refreshUser.mockRejectedValueOnce(new api.ApiError(500, "서버 오류"));
+    renderMyPage();
+    fireEvent.click(screen.getByRole("button", { name: /매칭 일시중지/ }));
+    await waitFor(() => expect(refreshUser).toHaveBeenCalled());
+    // 서버엔 이미 저장됐다. 갱신 실패로 UI가 되돌아가면 서버와 어긋난다
+    expect(
+      screen.getByRole("button", { name: /매칭 일시중지/ }),
+    ).toHaveTextContent("ON");
+  });
 });

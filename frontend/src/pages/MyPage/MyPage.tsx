@@ -24,9 +24,15 @@ export default function MyPage() {
     setPaused(next);
     try {
       await toggleMatchingPause(next);
-      await refreshUser();
     } catch {
       setPaused(!next); // 실패 롤백
+      return;
+    }
+    // 저장은 이미 끝났다. 갱신이 실패해도 롤백하면 서버 상태와 어긋난다.
+    try {
+      await refreshUser();
+    } catch {
+      /* 컨텍스트는 다음 조회 때 맞춰진다 */
     }
   }
 
