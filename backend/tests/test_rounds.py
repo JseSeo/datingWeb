@@ -25,6 +25,8 @@ def _add_rounds(*rounds: MatchRound) -> None:
     db = TestingSessionLocal()
     db.add_all(rounds)
     db.commit()
+    for r in rounds:
+        db.refresh(r)  # id 등 속성을 로드해둬야 커밋 후 세션 종료돼도 접근 가능
     db.close()
 
 
@@ -34,9 +36,10 @@ def _hours(n: int) -> datetime:
 
 def test_returns_nearest_future_pending_round(client: TestClient):
     headers = _register_and_get_headers(client)
+    nearest = MatchRound(scheduled_at=_hours(24), status=RoundStatus.pending)
     _add_rounds(
         MatchRound(scheduled_at=_hours(72), status=RoundStatus.pending),
-        MatchRound(scheduled_at=_hours(24), status=RoundStatus.pending),
+        nearest,
         MatchRound(scheduled_at=_hours(48), status=RoundStatus.pending),
     )
     response = client.get("/match-rounds/next", headers=headers)
@@ -44,7 +47,7 @@ def test_returns_nearest_future_pending_round(client: TestClient):
     data = response.json()
     assert data is not None
     # 가장 이른 것 = 24시간 뒤
-    assert data["scheduled_at"].startswith(_hours(24).strftime("%Y-%m-%dT%H"))
+    assert data["id"] == nearest.id
     # 절단선: 결과 영역 필드는 내려가지 않는다
     assert set(data.keys()) == {"id", "scheduled_at"}
 
