@@ -64,12 +64,12 @@ describe("RoundTab", () => {
   });
 
   it("생성 실패 시 서버 문구를 그대로 표시하고 목록은 그대로", async () => {
-    vi.spyOn(api, "listMatchRounds").mockResolvedValue([]);
+    vi.spyOn(api, "listMatchRounds").mockResolvedValue([pending]);
     vi.spyOn(api, "createMatchRound").mockRejectedValue(
       new ApiError(409, "같은 시각의 라운드가 이미 있습니다"),
     );
     render(<RoundTab />);
-    await waitFor(() => screen.getByText("예정된 라운드 없음"));
+    await waitFor(() => screen.getByText("2026-08-20 21:00"));
 
     fireEvent.change(screen.getByLabelText("매칭 예정 일시"), {
       target: { value: "2026-09-01T21:00" },
@@ -81,9 +81,10 @@ describe("RoundTab", () => {
         screen.getByText("같은 시각의 라운드가 이미 있습니다"),
       ).toBeInTheDocument(),
     );
-    // 목록이 비어있다는 사실 자체는 참이지만, 액션 에러 표시 중에는
-    // "예정된 라운드 없음" 문구를 함께 띄우지 않는다 (Finding 1 수정과 동일 조건).
-    expect(screen.queryByText("예정된 라운드 없음")).toBeNull();
+    // 기존 라운드는 그대로 남아있고 (낙관적 갱신 없음), 실패한 생성 요청이
+    // 목록에 유령 카드를 추가하지 않았다 — 개수로 못을 박는다.
+    expect(screen.getByText("2026-08-20 21:00")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "수정" })).toHaveLength(1);
   });
 
   it("빈 입력으로 추가하면 요청을 보내지 않는다", async () => {
