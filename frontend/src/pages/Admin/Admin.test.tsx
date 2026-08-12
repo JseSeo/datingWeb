@@ -7,6 +7,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(api, "listPendingVerifications").mockResolvedValue([]);
   vi.spyOn(api, "listReports").mockResolvedValue([]);
+  vi.spyOn(api, "listMatchRounds").mockResolvedValue([]);
 });
 
 describe("Admin", () => {
@@ -53,6 +54,32 @@ describe("Admin", () => {
     expect(screen.getByRole("tabpanel")).toHaveAttribute(
       "aria-labelledby",
       "tab-report",
+    );
+  });
+
+  it("라운드 탭 클릭 시 해당 탭 렌더", async () => {
+    render(<Admin />);
+    fireEvent.click(screen.getByRole("tab", { name: "라운드" }));
+    await waitFor(() => expect(api.listMatchRounds).toHaveBeenCalled());
+    expect(screen.queryByText("심사 대기 없음")).toBeNull();
+    expect(screen.getByText("예정된 라운드 없음")).toBeInTheDocument();
+  });
+
+  it("탭 3개 중 선택된 하나만 aria-selected=true", async () => {
+    render(<Admin />);
+    const round = screen.getByRole("tab", { name: "라운드" });
+    expect(screen.getAllByRole("tab")).toHaveLength(3);
+    expect(round).toHaveAttribute("aria-selected", "false");
+
+    fireEvent.click(round);
+    await waitFor(() => expect(round).toHaveAttribute("aria-selected", "true"));
+    expect(screen.getByRole("tab", { name: "학생증 심사" })).toHaveAttribute(
+      "aria-selected",
+      "false",
+    );
+    expect(screen.getByRole("tabpanel")).toHaveAttribute(
+      "aria-labelledby",
+      "tab-round",
     );
   });
 });

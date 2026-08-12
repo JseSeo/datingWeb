@@ -1,9 +1,10 @@
 import { useState } from "react";
 import VerificationTab from "./VerificationTab";
 import ReportTab from "./ReportTab";
+import RoundTab from "./RoundTab";
 import styles from "./Admin.module.css";
 
-type Tab = "verification" | "report";
+type Tab = "verification" | "report" | "round";
 
 export default function Admin() {
   const [tab, setTab] = useState<Tab>("verification");
@@ -32,14 +33,30 @@ export default function Admin() {
         >
           신고 · 건의
         </button>
+        <button
+          type="button"
+          role="tab"
+          id="tab-round"
+          aria-selected={tab === "round"}
+          className={tab === "round" ? `${styles.tab} ${styles.tabActive}` : styles.tab}
+          onClick={() => setTab("round")}
+        >
+          라운드
+        </button>
       </div>
-      {tab === "verification" ? (
+      {tab === "verification" && (
         <div role="tabpanel" aria-labelledby="tab-verification" tabIndex={0}>
           <VerificationTab />
         </div>
-      ) : (
+      )}
+      {tab === "report" && (
         <div role="tabpanel" aria-labelledby="tab-report" tabIndex={0}>
           <ReportTab />
+        </div>
+      )}
+      {tab === "round" && (
+        <div role="tabpanel" aria-labelledby="tab-round" tabIndex={0}>
+          <RoundTab />
         </div>
       )}
     </div>
