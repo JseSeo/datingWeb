@@ -65,6 +65,9 @@ export function kstInputToUtcISO(local: string): string | null {
 
   const date = new Date(`${value}${KST_OFFSET}`);
   if (Number.isNaN(date.getTime())) return null;
+  // 존재하지 않는 날짜(2/30, 4/31 등)는 형식은 맞아도 JS Date가 다음 달로
+  // 조용히 넘겨버린다 — KST 기준으로 되돌려 입력 날짜와 다르면 거부한다.
+  if (KST_DATE.format(date) !== local.slice(0, 10)) return null;
   return date.toISOString();
 }
 

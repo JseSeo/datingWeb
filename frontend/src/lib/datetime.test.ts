@@ -80,6 +80,18 @@ describe("kstInputToUtcISO", () => {
   it("형식은 맞지만 존재하지 않는 날짜는 null", () => {
     expect(kstInputToUtcISO("2026-13-45T21:00")).toBeNull();
   });
+
+  it("2월 30일처럼 달력에 없는 날짜는 null (다음 달로 넘어가지 않음)", () => {
+    expect(kstInputToUtcISO("2026-02-30T21:00")).toBeNull();
+  });
+
+  it("4월 31일처럼 그 달에 없는 날짜는 null", () => {
+    expect(kstInputToUtcISO("2026-04-31T21:00")).toBeNull();
+  });
+
+  it("윤년의 2월 29일은 실제 존재하는 날짜라 정상 변환", () => {
+    expect(kstInputToUtcISO("2028-02-29T21:00")).toBe("2028-02-29T12:00:00.000Z");
+  });
 });
 
 describe("utcISOToKstInput", () => {
