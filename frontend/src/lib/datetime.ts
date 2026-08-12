@@ -21,3 +21,28 @@ export function formatKST(iso: string): string {
   const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
   return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}`;
 }
+
+// en-CA 로케일은 YYYY-MM-DD 형태를 준다 — 날짜만 비교하기 위해 사용.
+const KST_DATE = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Seoul",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/** KST 자정 기준 UTC 밀리초. 날짜만 비교하려고 시각을 버린다. */
+function kstDayStart(date: Date): number {
+  const [year, month, day] = KST_DATE.format(date).split("-").map(Number);
+  return Date.UTC(year, month - 1, day);
+}
+
+/**
+ * KST 달력 기준 남은 "날짜" 수. 시각 차이가 아니라 날짜 차이다.
+ * 과거면 음수. 파싱 실패하면 null.
+ */
+export function daysUntilKST(iso: string, now: Date = new Date()): number | null {
+  const target = new Date(TZ_SUFFIX.test(iso) ? iso : `${iso}Z`);
+  if (Number.isNaN(target.getTime())) return null;
+  const MS_PER_DAY = 86_400_000;
+  return Math.round((kstDayStart(target) - kstDayStart(now)) / MS_PER_DAY);
+}

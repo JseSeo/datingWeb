@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatKST } from "./datetime";
+import { formatKST, daysUntilKST } from "./datetime";
 
 describe("formatKST", () => {
   it("타임존 표시 없는 UTC 문자열을 KST로 변환 (날짜 넘어감)", () => {
@@ -20,5 +20,37 @@ describe("formatKST", () => {
 
   it("파싱 불가한 입력은 원문 그대로 반환", () => {
     expect(formatKST("어제")).toBe("어제");
+  });
+});
+
+describe("daysUntilKST", () => {
+  it("3일 뒤면 3", () => {
+    expect(
+      daysUntilKST("2026-08-14T12:00:00", new Date("2026-08-11T12:00:00Z")),
+    ).toBe(3);
+  });
+
+  it("같은 KST 날짜면 0", () => {
+    expect(
+      daysUntilKST("2026-08-11T12:00:00", new Date("2026-08-11T00:00:00Z")),
+    ).toBe(0);
+  });
+
+  it("UTC로는 같은 날이어도 KST로 날짜가 넘어가면 1", () => {
+    // 대상: UTC 08-11 15:00 = KST 08-12 00:00
+    // 기준: UTC 08-11 14:00 = KST 08-11 23:00
+    expect(
+      daysUntilKST("2026-08-11T15:00:00Z", new Date("2026-08-11T14:00:00Z")),
+    ).toBe(1);
+  });
+
+  it("과거 시각이면 음수", () => {
+    expect(
+      daysUntilKST("2026-08-10T12:00:00", new Date("2026-08-11T12:00:00Z")),
+    ).toBe(-1);
+  });
+
+  it("파싱 불가한 입력은 null", () => {
+    expect(daysUntilKST("어제", new Date("2026-08-11T12:00:00Z"))).toBeNull();
   });
 });

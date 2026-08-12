@@ -12,8 +12,9 @@ const user = {
 };
 
 const logout = vi.fn();
+const refreshUser = vi.fn();
 vi.mock("../../lib/auth", () => ({
-  useAuth: () => ({ user, logout, refreshUser: vi.fn() }),
+  useAuth: () => ({ user, logout, refreshUser }),
 }));
 
 const navigate = vi.fn();
@@ -71,5 +72,43 @@ describe("MyPage", () => {
     renderMyPage();
     fireEvent.click(screen.getByRole("button", { name: /신고 & 건의/ }));
     expect(navigate).toHaveBeenCalledWith("/report");
+  });
+
+  it("매칭 일시중지 토글 성공 시 refreshUser 호출", async () => {
+    const spy = vi
+      .spyOn(api, "toggleMatchingPause")
+      .mockResolvedValue({ ...user, gender: "female" });
+    renderMyPage();
+    fireEvent.click(screen.getByRole("button", { name: /매칭 일시중지/ }));
+    await waitFor(() => expect(spy).toHaveBeenCalledWith(true));
+    expect(refreshUser).toHaveBeenCalled();
+  });
+
+  it("매칭 일시중지 토글 실패 시 refreshUser 호출 안 함", async () => {
+    vi.spyOn(api, "toggleMatchingPause").mockRejectedValue(
+      new api.ApiError(500, "서버 오류"),
+    );
+    renderMyPage();
+    fireEvent.click(screen.getByRole("button", { name: /매칭 일시중지/ }));
+    // 롤백으로 OFF가 다시 뜨면 catch 블록이 끝났다는 뜻 — 그 시점에 확정 검증
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /매칭 일시중지/ })).toHaveTextContent("OFF"),
+    );
+    expect(refreshUser).not.toHaveBeenCalled();
+  });
+
+  it("저장 성공 후 refreshUser가 실패해도 롤백하지 않음", async () => {
+    vi.spyOn(api, "toggleMatchingPause").mockResolvedValue({
+      ...user,
+      gender: "female",
+    });
+    refreshUser.mockRejectedValueOnce(new api.ApiError(500, "서버 오류"));
+    renderMyPage();
+    fireEvent.click(screen.getByRole("button", { name: /매칭 일시중지/ }));
+    await waitFor(() => expect(refreshUser).toHaveBeenCalled());
+    // 서버엔 이미 저장됐다. 갱신 실패로 UI가 되돌아가면 서버와 어긋난다
+    expect(
+      screen.getByRole("button", { name: /매칭 일시중지/ }),
+    ).toHaveTextContent("ON");
   });
 });

@@ -14,6 +14,7 @@ import type {
   ReportPayload,
   ReportOut,
   AdminReportOut,
+  MatchRoundOut,
 } from "./types";
 
 const BASE = import.meta.env.VITE_API_URL;
@@ -215,4 +216,8 @@ export function listReports(includeHandled = false): Promise<AdminReportOut[]> {
 
 export function markReportHandled(id: number): Promise<AdminReportOut> {
   return apiFetch<AdminReportOut>(`/admin/reports/${id}/handle`, { method: "POST" });
+}
+
+export function getNextRound(): Promise<MatchRoundOut | null> {
+  return apiFetch<MatchRoundOut | null>("/match-rounds/next", { method: "GET" });
 }
