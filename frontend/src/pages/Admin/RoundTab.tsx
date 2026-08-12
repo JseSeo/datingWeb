@@ -117,7 +117,7 @@ export default function RoundTab() {
 
       {loading && <p>불러오는 중…</p>}
       {error && <p className={styles.error}>{error}</p>}
-      {!loading && items.length === 0 && <p>예정된 라운드 없음</p>}
+      {!loading && !error && items.length === 0 && <p>예정된 라운드 없음</p>}
 
       {items.map((round) => (
         <div key={round.id} className={styles.card}>

@@ -56,6 +56,10 @@ describe("daysUntilKST", () => {
 });
 
 describe("kstInputToUtcISO", () => {
+  it("이 describe는 vite.config.ts의 TZ=UTC 설정을 전제로 한다 (깨지면 로컬 파싱 버그를 못 잡음)", () => {
+    expect(new Date().getTimezoneOffset()).toBe(0);
+  });
+
   it("KST 21:00 입력을 UTC 12:00으로 변환", () => {
     // 이 테스트는 TZ=UTC에서 돈다. 로컬 파싱 구현이면 21:00Z가 나와 실패한다
     expect(kstInputToUtcISO("2026-08-20T21:00")).toBe("2026-08-20T12:00:00.000Z");

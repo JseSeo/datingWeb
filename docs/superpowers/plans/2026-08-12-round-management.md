@@ -682,6 +682,8 @@ Expected: FAIL — `kstInputToUtcISO is not a function`
 
 `frontend/src/lib/datetime.ts` 파일 끝에 추가:
 
+> ⚠️ 아래 코드 블록은 리뷰에서 발견된 날짜 롤오버 결함(예: 2026-02-30T21:00이 조용히 2026-03-01로 바뀜)이 있는 수정 전 버전이다. 실제 배포된 구현은 커밋 `5d7d391`에서 고쳐졌고 `frontend/src/lib/datetime.ts`에 있다.
+
 ```ts
 // KST는 서머타임이 없어 고정 +09:00이다.
 const KST_OFFSET = "+09:00";

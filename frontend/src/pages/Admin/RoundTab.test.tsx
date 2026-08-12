@@ -81,7 +81,9 @@ describe("RoundTab", () => {
         screen.getByText("같은 시각의 라운드가 이미 있습니다"),
       ).toBeInTheDocument(),
     );
-    expect(screen.getByText("예정된 라운드 없음")).toBeInTheDocument();
+    // 목록이 비어있다는 사실 자체는 참이지만, 액션 에러 표시 중에는
+    // "예정된 라운드 없음" 문구를 함께 띄우지 않는다 (Finding 1 수정과 동일 조건).
+    expect(screen.queryByText("예정된 라운드 없음")).toBeNull();
   });
 
   it("빈 입력으로 추가하면 요청을 보내지 않는다", async () => {
@@ -172,5 +174,14 @@ describe("RoundTab", () => {
     await waitFor(() =>
       expect(screen.getByText("목록을 불러오지 못했어요.")).toBeInTheDocument(),
     );
+  });
+
+  it("로드 실패 시 목록이 비어있다는 문구는 뜨지 않는다", async () => {
+    vi.spyOn(api, "listMatchRounds").mockRejectedValue(new Error("fail"));
+    render(<RoundTab />);
+    await waitFor(() =>
+      expect(screen.getByText("목록을 불러오지 못했어요.")).toBeInTheDocument(),
+    );
+    expect(screen.queryByText("예정된 라운드 없음")).toBeNull();
   });
 });
