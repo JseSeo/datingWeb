@@ -96,3 +96,18 @@
 .card[data-handled="true"] {
   opacity: 0.5;
 }
+
+.formRow {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  margin-bottom: 16px;
+}
+
+.formLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  font-size: 14px;
+}
