@@ -82,3 +82,48 @@ def create_round(
     db.commit()
     db.refresh(round_)
     return round_
+
+
+def _get_editable_round(db: Session, round_id: int, action: str) -> MatchRound:
+    """404 → done 잠금 순으로 판정. done은 실행이 만든 상태라 손대지 않는다."""
+    round_ = db.get(MatchRound, round_id)
+    if round_ is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="존재하지 않는 라운드입니다",
+        )
+    if round_.status == RoundStatus.done:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"완료된 라운드는 {action}할 수 없습니다",
+        )
+    return round_
+
+
+@admin_router.put("/{round_id}", response_model=AdminMatchRoundOut)
+def update_round(
+    round_id: int,
+    payload: MatchRoundIn,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    round_ = _get_editable_round(db, round_id, "수정")
+    scheduled_at = _to_naive_utc(payload.scheduled_at)
+    _reject_past(scheduled_at)
+    _reject_duplicate(db, scheduled_at, exclude_id=round_id)
+    round_.scheduled_at = scheduled_at
+    db.commit()
+    db.refresh(round_)
+    return round_
+
+
+@admin_router.delete("/{round_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_round(
+    round_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    # 시각 규칙은 적용하지 않는다 — 지나간 pending 라운드도 지울 수 있어야 한다
+    round_ = _get_editable_round(db, round_id, "삭제")
+    db.delete(round_)
+    db.commit()
