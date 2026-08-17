@@ -15,6 +15,7 @@ import type {
   ReportOut,
   AdminReportOut,
   MatchRoundOut,
+  AdminMatchRoundOut,
 } from "./types";
 
 const BASE = import.meta.env.VITE_API_URL;
@@ -220,4 +221,31 @@ export function markReportHandled(id: number): Promise<AdminReportOut> {
 
 export function getNextRound(): Promise<MatchRoundOut | null> {
   return apiFetch<MatchRoundOut | null>("/match-rounds/next", { method: "GET" });
+}
+
+export function listMatchRounds(): Promise<AdminMatchRoundOut[]> {
+  return apiFetch<AdminMatchRoundOut[]>("/admin/match-rounds", { method: "GET" });
+}
+
+export function createMatchRound(
+  scheduledAtUtcISO: string,
+): Promise<AdminMatchRoundOut> {
+  return apiFetch<AdminMatchRoundOut>("/admin/match-rounds", {
+    method: "POST",
+    body: JSON.stringify({ scheduled_at: scheduledAtUtcISO }),
+  });
+}
+
+export function updateMatchRound(
+  id: number,
+  scheduledAtUtcISO: string,
+): Promise<AdminMatchRoundOut> {
+  return apiFetch<AdminMatchRoundOut>(`/admin/match-rounds/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({ scheduled_at: scheduledAtUtcISO }),
+  });
+}
+
+export function deleteMatchRound(id: number): Promise<void> {
+  return apiFetch<void>(`/admin/match-rounds/${id}`, { method: "DELETE" });
 }

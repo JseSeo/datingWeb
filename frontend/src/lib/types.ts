@@ -123,3 +123,9 @@ export interface MatchRoundOut {
   id: number;
   scheduled_at: string;
 }
+
+export interface AdminMatchRoundOut {
+  id: number;
+  scheduled_at: string;
+  status: "pending" | "done";
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatKST, daysUntilKST } from "./datetime";
+import { formatKST, daysUntilKST, kstInputToUtcISO, utcISOToKstInput } from "./datetime";
 
 describe("formatKST", () => {
   it("타임존 표시 없는 UTC 문자열을 KST로 변환 (날짜 넘어감)", () => {
@@ -52,5 +52,63 @@ describe("daysUntilKST", () => {
 
   it("파싱 불가한 입력은 null", () => {
     expect(daysUntilKST("어제", new Date("2026-08-11T12:00:00Z"))).toBeNull();
+  });
+});
+
+describe("kstInputToUtcISO", () => {
+  it("이 describe는 vite.config.ts의 TZ=UTC 설정을 전제로 한다 (깨지면 로컬 파싱 버그를 못 잡음)", () => {
+    expect(new Date().getTimezoneOffset()).toBe(0);
+  });
+
+  it("KST 21:00 입력을 UTC 12:00으로 변환", () => {
+    // 이 테스트는 TZ=UTC에서 돈다. 로컬 파싱 구현이면 21:00Z가 나와 실패한다
+    expect(kstInputToUtcISO("2026-08-20T21:00")).toBe("2026-08-20T12:00:00.000Z");
+  });
+
+  it("초가 포함된 형식도 같은 결과", () => {
+    expect(kstInputToUtcISO("2026-08-20T21:00:00")).toBe("2026-08-20T12:00:00.000Z");
+  });
+
+  it("KST 오전 8시는 전날 UTC 23시", () => {
+    expect(kstInputToUtcISO("2026-08-20T08:00")).toBe("2026-08-19T23:00:00.000Z");
+  });
+
+  it("빈 문자열은 null", () => {
+    expect(kstInputToUtcISO("")).toBeNull();
+  });
+
+  it("형식이 다른 입력은 null", () => {
+    expect(kstInputToUtcISO("2026-08-20 21:00")).toBeNull();
+  });
+
+  it("형식은 맞지만 존재하지 않는 날짜는 null", () => {
+    expect(kstInputToUtcISO("2026-13-45T21:00")).toBeNull();
+  });
+
+  it("2월 30일처럼 달력에 없는 날짜는 null (다음 달로 넘어가지 않음)", () => {
+    expect(kstInputToUtcISO("2026-02-30T21:00")).toBeNull();
+  });
+
+  it("4월 31일처럼 그 달에 없는 날짜는 null", () => {
+    expect(kstInputToUtcISO("2026-04-31T21:00")).toBeNull();
+  });
+
+  it("윤년의 2월 29일은 실제 존재하는 날짜라 정상 변환", () => {
+    expect(kstInputToUtcISO("2028-02-29T21:00")).toBe("2028-02-29T12:00:00.000Z");
+  });
+});
+
+describe("utcISOToKstInput", () => {
+  it("UTC ISO를 datetime-local 값으로", () => {
+    expect(utcISOToKstInput("2026-08-20T12:00:00.000Z")).toBe("2026-08-20T21:00");
+  });
+
+  it("타임존 표시 없는 값도 UTC로 간주", () => {
+    expect(utcISOToKstInput("2026-08-20T12:00:00")).toBe("2026-08-20T21:00");
+  });
+
+  it("분 단위 입력은 왕복해도 같다", () => {
+    const input = "2026-08-20T21:00";
+    expect(utcISOToKstInput(kstInputToUtcISO(input)!)).toBe(input);
   });
 });

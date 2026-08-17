@@ -46,3 +46,32 @@ export function daysUntilKST(iso: string, now: Date = new Date()): number | null
   const MS_PER_DAY = 86_400_000;
   return Math.round((kstDayStart(target) - kstDayStart(now)) / MS_PER_DAY);
 }
+
+// KST는 서머타임이 없어 고정 +09:00이다.
+const KST_OFFSET = "+09:00";
+const MINUTE_FORM = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+const SECOND_FORM = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/;
+
+/**
+ * datetime-local 값(KST로 해석)을 UTC ISO 문자열로. 잘못된 값이면 null.
+ * 오프셋을 명시해 파싱한다 — 접미사 없이 파싱하면 브라우저 로컬 시각이 되어
+ * KST가 아닌 환경에서 조용히 틀린다. 브라우저마다 초 유무가 달라 둘 다 받는다.
+ */
+export function kstInputToUtcISO(local: string): string | null {
+  let value: string;
+  if (MINUTE_FORM.test(local)) value = `${local}:00`;
+  else if (SECOND_FORM.test(local)) value = local;
+  else return null;
+
+  const date = new Date(`${value}${KST_OFFSET}`);
+  if (Number.isNaN(date.getTime())) return null;
+  // 존재하지 않는 날짜(2/30, 4/31 등)는 형식은 맞아도 JS Date가 다음 달로
+  // 조용히 넘겨버린다 — KST 기준으로 되돌려 입력 날짜와 다르면 거부한다.
+  if (KST_DATE.format(date) !== local.slice(0, 10)) return null;
+  return date.toISOString();
+}
+
+/** UTC ISO를 datetime-local 초기값("YYYY-MM-DDTHH:mm")으로. */
+export function utcISOToKstInput(iso: string): string {
+  return formatKST(iso).replace(" ", "T");
+}
