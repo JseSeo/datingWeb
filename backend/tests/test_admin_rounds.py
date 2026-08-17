@@ -1,7 +1,10 @@
 from datetime import datetime, timedelta
 
+import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.exc import IntegrityError
 
+from app.api import rounds
 from app.models.match import MatchRound, RoundStatus
 from tests.conftest import TestingSessionLocal
 
@@ -269,3 +272,45 @@ def test_delete_rejects_non_admin(client: TestClient):
     )
     res = client.delete(f"/admin/match-rounds/{round_id}", headers=headers)
     assert res.status_code == 403
+
+
+def test_db_rejects_duplicate_scheduled_at():
+    """앱 검사와 별개로 DB가 중복을 막는다 — 검사와 INSERT 사이 경쟁의 최후 방어선."""
+    when = datetime(2030, 1, 1, 12, 0)
+    _add_rounds(MatchRound(scheduled_at=when, status=RoundStatus.pending))
+    db = TestingSessionLocal()
+    db.add(MatchRound(scheduled_at=when, status=RoundStatus.pending))
+    with pytest.raises(IntegrityError):
+        db.commit()
+    db.rollback()
+    db.close()
+
+
+def test_create_returns_409_when_precheck_is_bypassed(
+    admin_client: TestClient, monkeypatch
+):
+    """_reject_duplicate를 무력화해 TOCTOU를 흉내낸다. 500이 아니라 409여야 한다."""
+    when = "2030-01-01T12:00:00"
+    assert admin_client.post(
+        "/admin/match-rounds", json={"scheduled_at": when}
+    ).status_code == 201
+    monkeypatch.setattr(rounds, "_reject_duplicate", lambda *args, **kwargs: None)
+    res = admin_client.post("/admin/match-rounds", json={"scheduled_at": when})
+    assert res.status_code == 409
+    assert res.json()["detail"] == "같은 시각의 라운드가 이미 있습니다"
+
+
+def test_update_returns_409_when_precheck_is_bypassed(
+    admin_client: TestClient, monkeypatch
+):
+    _, second_id = _add_rounds(
+        MatchRound(scheduled_at=datetime(2030, 1, 1, 12, 0), status=RoundStatus.pending),
+        MatchRound(scheduled_at=datetime(2030, 1, 2, 12, 0), status=RoundStatus.pending),
+    )
+    monkeypatch.setattr(rounds, "_reject_duplicate", lambda *args, **kwargs: None)
+    res = admin_client.put(
+        f"/admin/match-rounds/{second_id}",
+        json={"scheduled_at": "2030-01-01T12:00:00"},
+    )
+    assert res.status_code == 409
+    assert res.json()["detail"] == "같은 시각의 라운드가 이미 있습니다"

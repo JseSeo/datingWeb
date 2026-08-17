@@ -1,6 +1,6 @@
 import enum
 from datetime import datetime
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer
+from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
@@ -12,6 +12,10 @@ class RoundStatus(str, enum.Enum):
 
 class MatchRound(Base):
     __tablename__ = "match_rounds"
+    # 같은 시각 라운드 2건 금지. 앱 검사(_reject_duplicate)의 경쟁 구간을 DB가 막는다
+    __table_args__ = (
+        Index("uq_match_rounds_scheduled_at", "scheduled_at", unique=True),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     scheduled_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)

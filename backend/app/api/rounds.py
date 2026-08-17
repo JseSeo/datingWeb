@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, require_admin
@@ -58,6 +59,19 @@ def _reject_duplicate(
         )
 
 
+def _commit_or_conflict(db: Session) -> None:
+    """`scheduled_at` 유니크 제약 위반을 409로. _reject_duplicate가 통과한 뒤
+    다른 요청이 먼저 커밋한 경우(TOCTOU)에만 도달한다."""
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="같은 시각의 라운드가 이미 있습니다",
+        ) from None
+
+
 @admin_router.get("", response_model=list[AdminMatchRoundOut])
 def list_rounds(
     db: Session = Depends(get_db),
@@ -79,7 +93,7 @@ def create_round(
     # status는 모델 default(pending). 클라이언트 입력은 스키마에 없으므로 버려진다
     round_ = MatchRound(scheduled_at=scheduled_at)
     db.add(round_)
-    db.commit()
+    _commit_or_conflict(db)
     db.refresh(round_)
     return round_
 
@@ -112,7 +126,7 @@ def update_round(
     _reject_past(scheduled_at)
     _reject_duplicate(db, scheduled_at, exclude_id=round_id)
     round_.scheduled_at = scheduled_at
-    db.commit()
+    _commit_or_conflict(db)
     db.refresh(round_)
     return round_
 
