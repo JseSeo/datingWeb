@@ -26,7 +26,7 @@
 | soft delete | `pending` 라운드에는 `Match`가 붙을 수 없어 hard delete가 FK상 안전하다. soft로 가면 `deleted_at` 컬럼과 **모든** 조회 필터(`/match-rounds/next` 포함)가 따라온다 |
 | 페이지네이션 | 주 1회 = 연간 약 50행 |
 | `/home` 변경 | 기존 화면은 그대로 동작한다 |
-| 모델 변경 · alembic 마이그레이션 | 기존 `MatchRound` 컬럼으로 충분 |
+| ~~모델 변경 · alembic 마이그레이션~~ | ~~기존 `MatchRound` 컬럼으로 충분~~ → **2026-08-17 철회.** 중복 방지를 DB 보증으로 올리려 유니크 인덱스 1개를 추가했다. 컬럼은 그대로 (아래 "중복 방지의 두 층") |
 
 ## 절단선 — 실행과 CRUD의 경계
 
@@ -37,6 +37,8 @@
 - `done` 라운드는 수정·삭제가 잠긴다
 
 이렇게 하면 실행 경로가 코드에 존재하지 않으므로 알고리즘 영역과 물리적으로 분리된다. 나중에 실행을 붙일 때 이 CRUD 스펙을 뒤집을 필요가 없다.
+
+**실행을 붙일 때 같이 볼 것 — `Match` FK와 hard delete.** `Match.match_round_id`는 `nullable=False`에 `ondelete` 정책이 없고, `delete_round`는 hard delete다. 지금은 `done` 잠금이 둘 사이를 막지만, 실행이 `Match`를 만든 뒤 `status`를 늦게 커밋하면 그 창에서 삭제가 FK 위반 500이 된다. CASCADE냐 RESTRICT냐는 "라운드를 지우면 성사된 매칭도 사라지는가"라는 제품 결정이라 실행 설계와 함께 정한다.
 
 ### `scheduled_at`의 의미 — 알려진 모호성
 
@@ -116,6 +118,19 @@ def _to_naive_utc(dt: datetime) -> datetime:
 검증은 **백엔드에만** 둔다. 프론트는 `required`만 걸고 서버 `detail`을 그대로 표시한다. 규칙을 두 곳에 두면 드리프트가 확실히 온다 — 과거 판정만 해도 프론트는 브라우저 시계, 백엔드는 서버 시계라 경계에서 이미 어긋난다. `apiFetch`가 `ApiError`에 `detail`을 담아 던지므로(`frontend/src/lib/api.ts`) UX 손실도 없다.
 
 **"과거 거부"는 기존 값이 아니라 저장하려는 새 값을 본다.** 그래서 생성과 수정이 같은 규칙 하나로 끝난다. 관리자가 실행하지 못하고 지나간 `pending` 라운드를 다음 주로 옮기는 것은 새 값이 미래이므로 통과한다.
+
+### 중복 방지의 두 층 (2026-08-17 추가)
+
+`_reject_duplicate`의 SELECT와 INSERT 사이에 다른 요청이 끼어들면 같은 `scheduled_at` 2건이 통과한다(TOCTOU). 그래서 두 층으로 막는다.
+
+| 층 | 수단 | 역할 |
+|----|------|------|
+| 앱 | `_reject_duplicate` SELECT | 정상 경로. 쓰기 전에 409 + 문구 |
+| DB | `uq_match_rounds_scheduled_at` 유니크 인덱스 (`9c9c633d854d`) | 경쟁 구간의 최후 방어선 |
+
+DB가 막으면 `IntegrityError`가 나는데, `_commit_or_conflict`가 이를 rollback 후 **같은 409 + 같은 문구**로 바꾼다. 클라이언트 입장에서 두 층은 구분되지 않는다.
+
+UNIQUE 제약이 아니라 **유니크 인덱스**를 쓴다 — SQLite에서 제약을 붙이려면 테이블 재생성(batch)이 필요하고, 그 과정이 `matches.match_round_id` FK 참조를 건드릴 수 있다. 인덱스는 재생성 없이 붙고 강제력은 같다. 모델도 `__table_args__`의 `Index(..., unique=True)`로 선언해 마이그레이션과 형태를 맞췄다.
 
 **중복은 초 단위 정확 일치만 본다.** "KST 같은 날 두 개 금지"가 주 1회 도메인에는 더 맞지만, 그러려면 백엔드가 KST 오프셋을 알아야 한다(UTC `[전날 15:00, 당일 15:00)` 범위 쿼리). 타임존 지식은 프론트에만 두는 이 설계의 원칙이 깨지고, 그 상수가 이후 다른 곳으로 퍼질 위험이 있다. 같은 날 중복은 예정일 내림차순 목록에서 두 행이 붙어 보이므로 관리자 눈으로 잡힌다.
 
