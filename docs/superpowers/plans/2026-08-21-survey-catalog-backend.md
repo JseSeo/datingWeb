@@ -657,7 +657,7 @@ Expected: PASS
 - [ ] **Step 7: 전체 테스트**
 
 Run: `cd backend; uv run pytest -q`
-Expected: PASS (161개)
+Expected: PASS (160개 = 기존 139 + Task 1의 16 + 이번 5)
 
 - [ ] **Step 8: 커밋**
 
@@ -1095,7 +1095,7 @@ Expected: 타입 에러 0 / 테스트 전부 통과 / 린트 경고 0
 - [ ] **Step 8: 백엔드 전체 테스트 재확인**
 
 Run: `cd backend; uv run pytest -q`
-Expected: PASS (161개)
+Expected: PASS (160개)
 
 - [ ] **Step 9: 커밋**
 
