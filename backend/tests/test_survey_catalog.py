@@ -1,3 +1,5 @@
+from fastapi.testclient import TestClient
+
 from app.survey.catalog import (
     FACE_ANY_ID,
     FACE_TYPES,
@@ -108,3 +110,68 @@ def test_얼굴상_목록():
 
 def test_FACE_ANY_ID는_얼굴상_목록과_겹치지_않는다():
     assert not any(f.id == FACE_ANY_ID for f in FACE_TYPES)
+
+
+def _headers(client: TestClient, email: str = "catalog@test.com") -> dict:
+    client.post("/auth/register", json={
+        "email": email,
+        "password": "password123",
+        "name": "김카탈",
+        "university": "서울대학교",
+        "gender": "male",
+        "agreed_terms": True,
+        "agreed_privacy": True,
+        "agreed_age_14": True,
+    })
+    res = client.post("/auth/login", json={"email": email, "password": "password123"})
+    return {"Authorization": f"Bearer {res.json()['access_token']}"}
+
+
+def test_카탈로그_조회는_로그인_필요(client: TestClient):
+    res = client.get("/survey/questions")
+    assert res.status_code == 401
+
+
+def test_카탈로그_45문항_반환(client: TestClient):
+    res = client.get("/survey/questions", headers=_headers(client))
+    assert res.status_code == 200
+    body = res.json()
+    assert len(body["questions"]) == 45
+
+
+def test_카탈로그_응답에_얼굴상_포함(client: TestClient):
+    body = client.get("/survey/questions", headers=_headers(client)).json()
+    assert len(body["face_types"]) == 4
+    assert body["face_any_id"] == "any"
+    assert body["face_types"][0]["image"].startswith("/faces/")
+
+
+def test_카탈로그_문항_필드_형태(client: TestClient):
+    body = client.get("/survey/questions", headers=_headers(client)).json()
+    by_id = {q["id"]: q for q in body["questions"]}
+
+    height = by_id["height_self"]
+    assert height["type"] == "number"
+    assert height["unit"] == "cm"
+    assert height["section"] == "self"
+
+    pref = by_id["height_pref"]
+    assert pref["no_pref_id"] == "any"
+    assert [c["id"] for c in pref["choices"]][0] == "u165"
+
+    scale = by_id["contact_freq_self"]
+    assert scale["scale_labels"] == ["가끔", "자주"]
+
+    ranking = by_id["priority_rank_self"]
+    assert [i["id"] for i in ranking["rank_items"]] == [
+        "lover", "friend", "self_dev", "family",
+    ]
+
+    assert by_id["grooming_self"]["male_only"] is True
+    assert by_id["face_pref"]["face"] is True
+
+
+def test_카탈로그_응답에_category는_노출하지_않는다(client: TestClient):
+    """카테고리 가중치는 내부 매칭 로직 전용이다. 프론트에 흘리지 않는다."""
+    body = client.get("/survey/questions", headers=_headers(client)).json()
+    assert "category" not in body["questions"][0]
