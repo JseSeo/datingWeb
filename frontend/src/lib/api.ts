@@ -16,6 +16,7 @@ import type {
   AdminReportOut,
   MatchRoundOut,
   AdminMatchRoundOut,
+  SurveyCatalog,
 } from "./types";
 
 const BASE = import.meta.env.VITE_API_URL;
@@ -188,6 +189,10 @@ export function saveSurvey(answers: SurveyData): Promise<SurveyOut> {
     method: "PUT",
     body: JSON.stringify({ answers }),
   });
+}
+
+export function getSurveyCatalog(): Promise<SurveyCatalog> {
+  return apiFetch<SurveyCatalog>("/survey/questions", { method: "GET" });
 }
 
 export async function fetchVerificationImage(id: number): Promise<string> {
