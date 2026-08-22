@@ -1,18 +1,25 @@
-import type { Question, AnswerValue } from "./types";
-import { FACE_TYPES, FACE_ANY_ID } from "./faceTypes";
+import type { FaceChoice, Question, AnswerValue } from "./types";
 import styles from "./QuestionField.module.css";
 
 interface Props {
   question: Question;
   value: AnswerValue | undefined;
   onChange: (value: AnswerValue) => void;
+  faceTypes: FaceChoice[];
+  faceAnyId: string;
 }
 
 function toggle(arr: string[], id: string): string[] {
   return arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id];
 }
 
-export function QuestionField({ question: q, value, onChange }: Props) {
+export function QuestionField({
+  question: q,
+  value,
+  onChange,
+  faceTypes,
+  faceAnyId,
+}: Props) {
   if (q.type === "single") {
     return (
       <div className={styles.field}>
@@ -47,7 +54,7 @@ export function QuestionField({ question: q, value, onChange }: Props) {
     return (
       <div className={styles.field}>
         <div className={styles.scaleRow}>
-          <span className={styles.scaleEnd}>{q.scaleLabels?.[0]}</span>
+          <span className={styles.scaleEnd}>{q.scale_labels?.[0]}</span>
           {[1, 2, 3, 4, 5].map((n) => (
             <label key={n} className={styles.scaleItem}>
               <input type="radio" name={q.id} aria-label={String(n)}
@@ -55,7 +62,7 @@ export function QuestionField({ question: q, value, onChange }: Props) {
               {n}
             </label>
           ))}
-          <span className={styles.scaleEnd}>{q.scaleLabels?.[1]}</span>
+          <span className={styles.scaleEnd}>{q.scale_labels?.[1]}</span>
         </div>
       </div>
     );
@@ -80,8 +87,8 @@ export function QuestionField({ question: q, value, onChange }: Props) {
   if (q.type === "ranking") {
     const order = Array.isArray(value) && value.length
       ? value
-      : q.rankItems!.map((i) => i.id);
-    const labelOf = (id: string) => q.rankItems!.find((i) => i.id === id)?.label ?? id;
+      : q.rank_items!.map((i) => i.id);
+    const labelOf = (id: string) => q.rank_items!.find((i) => i.id === id)?.label ?? id;
     const move = (idx: number, dir: -1 | 1) => {
       const next = [...order];
       const j = idx + dir;
@@ -110,8 +117,8 @@ export function QuestionField({ question: q, value, onChange }: Props) {
   const isMulti = q.type === "image-multi";
   const arr = Array.isArray(value) ? value : [];
   const faceOptions = isMulti
-    ? [...FACE_TYPES, { id: FACE_ANY_ID, label: "상관없음", image: "" }]
-    : FACE_TYPES;
+    ? [...faceTypes, { id: faceAnyId, label: "상관없음", image: "" }]
+    : faceTypes;
   return (
     <div className={styles.field}>
       {isMulti && <p className={styles.hint}>복수 선택 가능</p>}
