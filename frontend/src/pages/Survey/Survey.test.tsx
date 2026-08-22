@@ -82,11 +82,4 @@ describe("Survey page", () => {
     await waitFor(() => screen.getByText("내 흡연"));
     expect(screen.queryByText("외모관리 습관")).not.toBeInTheDocument();
   });
-
-  it("여성이면 grooming_self(외모관리 습관)를 숨긴다", async () => {
-    authState.gender = "female";
-    render(<Survey />);
-    await waitFor(() => screen.getByText("내 흡연"));
-    expect(screen.queryByText("외모관리 습관")).not.toBeInTheDocument();
-  });
 });

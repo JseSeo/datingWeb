@@ -8,6 +8,7 @@ from app.survey.catalog import (
 )
 
 QUESTION_BY_ID = {q.id: q for q in QUESTIONS}
+QUESTION_TYPES = {"single", "multi", "scale", "number", "ranking", "image-single", "image-multi"}
 
 
 def test_총_45문항():
@@ -17,6 +18,12 @@ def test_총_45문항():
 def test_id_중복_없음():
     ids = [q.id for q in QUESTIONS]
     assert len(set(ids)) == len(ids)
+
+
+def test_section과_type은_허용값만():
+    for q in QUESTIONS:
+        assert q.section in ("self", "partner"), q.id
+        assert q.type in QUESTION_TYPES, q.id
 
 
 def test_single_multi_문항은_choices_보유():
