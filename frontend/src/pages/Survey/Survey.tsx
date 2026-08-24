@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../lib/auth";
-import { getSurvey, saveSurvey } from "../../lib/api";
-import { QUESTIONS } from "./questions";
+import { getSurvey, getSurveyCatalog, saveSurvey } from "../../lib/api";
 import { QuestionField } from "./QuestionField";
-import type { AnswerValue, Question, SurveyResponses } from "./types";
+import type {
+  AnswerValue,
+  FaceChoice,
+  Question,
+  SurveyResponses,
+} from "./types";
 import styles from "./Survey.module.css";
 
 function isAnswered(_q: Question, v: AnswerValue | undefined): boolean {
@@ -18,11 +22,25 @@ export default function Survey() {
   const [responses, setResponses] = useState<SurveyResponses>({});
   const [absolute, setAbsolute] = useState<string[]>([]);
   const [status, setStatus] = useState<"" | "saving" | "saved" | "error">("");
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [faceTypes, setFaceTypes] = useState<FaceChoice[]>([]);
+  const [faceAnyId, setFaceAnyId] = useState("any");
+  const [catalogFailed, setCatalogFailed] = useState(false);
 
   const visible = useMemo(
-    () => QUESTIONS.filter((q) => !(q.maleOnly && user?.gender !== "male")),
-    [user?.gender],
+    () => questions.filter((q) => !(q.male_only && user?.gender !== "male")),
+    [questions, user?.gender],
   );
+
+  useEffect(() => {
+    getSurveyCatalog()
+      .then((c) => {
+        setQuestions(c.questions);
+        setFaceTypes(c.face_types);
+        setFaceAnyId(c.face_any_id);
+      })
+      .catch(() => setCatalogFailed(true));
+  }, []);
 
   useEffect(() => {
     getSurvey().then((res) => {
@@ -44,9 +62,9 @@ export default function Survey() {
     if (q.section !== "partner") return false;
     const v = responses[q.id];
     if (!isAnswered(q, v)) return false;
-    if (q.noPrefId) {
-      if (v === q.noPrefId) return false;
-      if (Array.isArray(v) && v.includes(q.noPrefId)) return false;
+    if (q.no_pref_id) {
+      if (v === q.no_pref_id) return false;
+      if (Array.isArray(v) && v.includes(q.no_pref_id)) return false;
     }
     if (absolute.length >= 2 && !absolute.includes(q.id)) return false;
     return true;
@@ -66,9 +84,9 @@ export default function Survey() {
         if (!q) return false;
         const v = responses[id];
         if (!isAnswered(q, v)) return false;
-        if (q.noPrefId) {
-          if (v === q.noPrefId) return false;
-          if (Array.isArray(v) && v.includes(q.noPrefId)) return false;
+        if (q.no_pref_id) {
+          if (v === q.no_pref_id) return false;
+          if (Array.isArray(v) && v.includes(q.no_pref_id)) return false;
         }
         return true;
       });
@@ -83,6 +101,24 @@ export default function Survey() {
     { key: "self", title: "나에 대해" },
     { key: "partner", title: "원하는 상대" },
   ];
+
+  if (catalogFailed) {
+    return (
+      <div className={styles.wrap}>
+        <h1 className={styles.title}>가치관 설문</h1>
+        <p className={styles.err}>설문을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.</p>
+      </div>
+    );
+  }
+
+  if (questions.length === 0) {
+    return (
+      <div className={styles.wrap}>
+        <h1 className={styles.title}>가치관 설문</h1>
+        <p className={styles.progress}>불러오는 중...</p>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.wrap}>
@@ -107,7 +143,8 @@ export default function Survey() {
                 )}
               </div>
               <QuestionField question={q} value={responses[q.id]}
-                onChange={(v) => setValue(q.id, v)} />
+                onChange={(v) => setValue(q.id, v)}
+                faceTypes={faceTypes} faceAnyId={faceAnyId} />
             </div>
           ))}
         </section>

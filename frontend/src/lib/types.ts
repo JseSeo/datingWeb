@@ -129,3 +129,45 @@ export interface AdminMatchRoundOut {
   scheduled_at: string;
   status: "pending" | "done";
 }
+
+export type Section = "self" | "partner";
+
+export type QuestionType =
+  | "single"
+  | "multi"
+  | "scale"
+  | "number"
+  | "ranking"
+  | "image-single"
+  | "image-multi";
+
+export interface Choice {
+  id: string;
+  label: string;
+}
+
+export interface FaceChoice {
+  id: string;
+  label: string;
+  image: string;
+}
+
+export interface Question {
+  id: string;
+  section: Section;
+  label: string;
+  type: QuestionType;
+  choices?: Choice[] | null;
+  face?: boolean;
+  rank_items?: Choice[] | null;
+  scale_labels?: [string, string] | null;
+  unit?: string | null;
+  male_only?: boolean;
+  no_pref_id?: string | null;
+}
+
+export interface SurveyCatalog {
+  questions: Question[];
+  face_types: FaceChoice[];
+  face_any_id: string;
+}
