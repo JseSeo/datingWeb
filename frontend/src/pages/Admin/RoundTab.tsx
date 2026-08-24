@@ -6,14 +6,21 @@ import {
   createMatchRound,
   updateMatchRound,
   deleteMatchRound,
+  runMatchRound,
 } from "../../lib/api";
-import type { AdminMatchRoundOut } from "../../lib/types";
+import type { AdminMatchRoundOut, MatchingRunOut } from "../../lib/types";
 import { formatKST, kstInputToUtcISO, utcISOToKstInput } from "../../lib/datetime";
 import { Button } from "../../components/Button/Button";
 import styles from "./Admin.module.css";
 
 const INVALID_INPUT = "올바른 일시를 입력하세요.";
 const GENERIC_ERROR = "요청에 실패했어요. 다시 시도해주세요.";
+
+const STATUS_LABEL: Record<AdminMatchRoundOut["status"], string> = {
+  pending: "예정",
+  running: "실행중",
+  done: "완료",
+};
 
 // 서버가 주는 값은 모두 같은 형식의 naive UTC 문자열이라 사전순 = 시간순이다.
 function sortDesc(items: AdminMatchRoundOut[]): AdminMatchRoundOut[] {
@@ -31,6 +38,8 @@ export default function RoundTab() {
   const [editValue, setEditValue] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [running, setRunning] = useState<number | null>(null);
+  const [summary, setSummary] = useState<(MatchingRunOut & { id: number }) | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -100,6 +109,24 @@ export default function RoundTab() {
     }
   }
 
+  async function handleRun(id: number) {
+    // 되돌릴 수 없는 작업이라 한 번 더 묻는다
+    if (!window.confirm("이 라운드의 매칭을 실행할까요? 되돌릴 수 없어요.")) return;
+    setError("");
+    setRunning(id);
+    try {
+      const result = await runMatchRound(id);
+      setSummary({ ...result, id });
+      setItems((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, status: "done" } : r)),
+      );
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setRunning(null);
+    }
+  }
+
   return (
     <div className={styles.wrap}>
       <form className={styles.formRow} onSubmit={handleCreate}>
@@ -121,9 +148,7 @@ export default function RoundTab() {
 
       {items.map((round) => (
         <div key={round.id} className={styles.card}>
-          <span className={styles.badge}>
-            {round.status === "pending" ? "예정" : "완료"}
-          </span>
+          <span className={styles.badge}>{STATUS_LABEL[round.status]}</span>
           {editingId === round.id ? (
             <>
               <label className={styles.formLabel} htmlFor={`round-edit-${round.id}`}>
@@ -145,9 +170,17 @@ export default function RoundTab() {
               <div className={styles.name}>{formatKST(round.scheduled_at)}</div>
               {round.status === "pending" && (
                 <div className={styles.actions}>
+                  <Button onClick={() => handleRun(round.id)} disabled={running === round.id}>
+                    {running === round.id ? "실행 중…" : "매칭 실행"}
+                  </Button>
                   <Button onClick={() => startEdit(round)}>수정</Button>
                   <Button onClick={() => handleDelete(round.id)}>삭제</Button>
                 </div>
+              )}
+              {summary?.id === round.id && (
+                <p className={styles.summary}>
+                  {summary.matched}쌍 매칭 (보장 {summary.guaranteed}쌍) · 미매칭 {summary.unmatched}명
+                </p>
               )}
             </>
           )}

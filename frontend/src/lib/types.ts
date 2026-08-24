@@ -127,7 +127,13 @@ export interface MatchRoundOut {
 export interface AdminMatchRoundOut {
   id: number;
   scheduled_at: string;
-  status: "pending" | "done";
+  status: "pending" | "running" | "done";
+}
+
+export interface MatchingRunOut {
+  matched: number;
+  unmatched: number;
+  guaranteed: number;
 }
 
 export type Section = "self" | "partner";

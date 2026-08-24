@@ -186,3 +186,63 @@ describe("RoundTab", () => {
     expect(screen.queryByText("예정된 라운드 없음")).toBeNull();
   });
 });
+
+describe("매칭 실행", () => {
+  it("pending 라운드에 실행 버튼이 있고, 누르면 결과 요약이 보인다", async () => {
+    vi.spyOn(api, "listMatchRounds").mockResolvedValue([
+      { id: 1, scheduled_at: "2026-09-01T10:00:00", status: "pending" },
+    ]);
+    vi.spyOn(api, "runMatchRound").mockResolvedValue({
+      matched: 12, unmatched: 3, guaranteed: 2,
+    });
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    render(<RoundTab />);
+    const button = await screen.findByRole("button", { name: "매칭 실행" });
+    fireEvent.click(button);
+
+    expect(await screen.findByText(/12쌍/)).toBeInTheDocument();
+    expect(screen.getByText(/미매칭 3명/)).toBeInTheDocument();
+    expect(api.runMatchRound).toHaveBeenCalledWith(1);
+  });
+
+  it("확인 창에서 취소하면 실행하지 않는다", async () => {
+    vi.spyOn(api, "listMatchRounds").mockResolvedValue([
+      { id: 1, scheduled_at: "2026-09-01T10:00:00", status: "pending" },
+    ]);
+    const spy = vi.spyOn(api, "runMatchRound");
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+
+    render(<RoundTab />);
+    fireEvent.click(await screen.findByRole("button", { name: "매칭 실행" }));
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("done 라운드에는 실행 버튼이 없다", async () => {
+    vi.spyOn(api, "listMatchRounds").mockResolvedValue([
+      { id: 1, scheduled_at: "2026-09-01T10:00:00", status: "done" },
+    ]);
+
+    render(<RoundTab />);
+    expect(await screen.findByText("완료")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "매칭 실행" })).toBeNull();
+  });
+
+  it("실행 실패 메시지를 보여준다", async () => {
+    vi.spyOn(api, "listMatchRounds").mockResolvedValue([
+      { id: 1, scheduled_at: "2026-09-01T10:00:00", status: "pending" },
+    ]);
+    vi.spyOn(api, "runMatchRound").mockRejectedValue(
+      new ApiError(409, "이미 실행 중이거나 완료된 라운드입니다"),
+    );
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    render(<RoundTab />);
+    fireEvent.click(await screen.findByRole("button", { name: "매칭 실행" }));
+
+    expect(
+      await screen.findByText("이미 실행 중이거나 완료된 라운드입니다"),
+    ).toBeInTheDocument();
+  });
+});

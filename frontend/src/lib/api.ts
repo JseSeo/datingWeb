@@ -16,6 +16,7 @@ import type {
   AdminReportOut,
   MatchRoundOut,
   AdminMatchRoundOut,
+  MatchingRunOut,
   SurveyCatalog,
 } from "./types";
 
@@ -253,4 +254,10 @@ export function updateMatchRound(
 
 export function deleteMatchRound(id: number): Promise<void> {
   return apiFetch<void>(`/admin/match-rounds/${id}`, { method: "DELETE" });
+}
+
+export function runMatchRound(id: number): Promise<MatchingRunOut> {
+  return apiFetch<MatchingRunOut>(`/admin/match-rounds/${id}/run`, {
+    method: "POST",
+  });
 }
