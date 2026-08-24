@@ -1,6 +1,13 @@
 import pytest
 
-from app.services.scoring import PAIRS, satisfaction
+from app.services.scoring import (
+    PAIRS,
+    absolute_ok,
+    direction_score,
+    pair_allowed,
+    pair_score,
+    satisfaction,
+)
 
 
 def sat(base, pref, self_):
@@ -130,3 +137,69 @@ def test_residence_hops(pref, mine, theirs, expected):
 
 def test_residence_needs_my_own_residence():
     assert sat("residence", {"residence_pref": "h1"}, {"residence_self": "서울"}) is None
+
+
+def _answers(responses: dict, absolute: list[str] | None = None) -> dict:
+    return {"responses": responses, "absolute": absolute or []}
+
+
+def test_direction_score_is_percentage_of_answered_questions():
+    """만족 1개 + 불만족 1개 = 가중치 비율대로 환산된다."""
+    pref = {"sleep_pref": "night", "hobby_pref": "indoor"}
+    self_ = {"sleep_self": "night", "hobby_self": "outdoor"}
+    # 둘 다 LIFESTYLE(가중치 1.0) → (1.0 + 0.0) / 2.0 × 100 = 50
+    assert direction_score(pref, self_) == 50.0
+
+
+def test_category_weight_is_applied():
+    """가치관(1.5)만 만족, 외모(0.8)만 불만족 → 1.5 / 2.3 × 100"""
+    pref = {"politics_pref": "moderate", "tattoo_pref": "none"}
+    self_ = {"politics_self": "moderate", "tattoo_self": "yes"}
+    assert direction_score(pref, self_) == pytest.approx(1.5 / 2.3 * 100)
+
+
+def test_direction_score_is_zero_when_nothing_comparable():
+    """비교 가능한 문항이 하나도 없으면 0. 0으로 나누지 않는다 (설계 §3.5)."""
+    assert direction_score({}, {}) == 0.0
+    assert direction_score({"sleep_pref": "any"}, {"sleep_self": "night"}) == 0.0
+
+
+def test_pair_score_takes_the_lower_direction():
+    a = _answers({"sleep_pref": "night", "sleep_self": "morning"})
+    b = _answers({"sleep_pref": "morning", "sleep_self": "night"})
+    # A→B: A가 원하는 night를 B가 만족 → 100 / B→A: B가 원하는 morning을 A가 만족 → 100
+    assert pair_score(a, b) == 100.0
+
+    c = _answers({"sleep_pref": "night", "sleep_self": "night"})
+    d = _answers({"sleep_pref": "morning", "sleep_self": "night"})
+    # C→D 100, D→C 0 → min = 0
+    assert pair_score(c, d) == 0.0
+
+
+def test_absolute_question_must_be_fully_satisfied():
+    picky = _answers({"sleep_pref": "night"}, absolute=["sleep_pref"])
+    assert absolute_ok(picky, {"sleep_self": "night"}) is True
+    assert absolute_ok(picky, {"sleep_self": "morning"}) is False
+
+
+def test_absolute_scale_question_allows_one_step():
+    """척도형만 0.75까지 완화 (설계 §3.6)."""
+    picky = _answers({"contact_freq_pref": 3}, absolute=["contact_freq_pref"])
+    assert absolute_ok(picky, {"contact_freq_self": 4}) is True   # 0.75
+    assert absolute_ok(picky, {"contact_freq_self": 5}) is False  # 0.5
+
+
+def test_absolute_passes_when_undecidable():
+    """상대가 미응답이라 판정 불가면 통과시킨다 (설계 §3.6)."""
+    picky = _answers({"sleep_pref": "night"}, absolute=["sleep_pref"])
+    assert absolute_ok(picky, {}) is True
+
+
+def test_pair_allowed_checks_both_directions():
+    a = _answers({"sleep_pref": "night", "sleep_self": "morning"}, absolute=["sleep_pref"])
+    b = _answers({"sleep_self": "night"})
+    assert pair_allowed(a, b) is True
+
+    strict_b = _answers({"sleep_pref": "night", "sleep_self": "night"}, absolute=["sleep_pref"])
+    # B의 절대질문(night)을 A(morning)가 어긴다
+    assert pair_allowed(a, strict_b) is False

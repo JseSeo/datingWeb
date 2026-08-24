@@ -278,3 +278,61 @@ def satisfaction(base: str, pref_responses: dict, self_responses: dict) -> float
     if base == "residence":
         return _residence(pref_value, pref_responses.get("residence_self"), self_value)
     return _RULES[base](pref_value, self_value)
+
+
+# ── 집계 (설계 §3.5) ──────────────────────────────────────
+
+def direction_score(pref_responses: dict, self_responses: dict) -> float:
+    """"내 선호를 상대가 얼마나 만족하나"를 0~100으로. 제외 문항은 분모에서도 빠진다."""
+    numerator = denominator = 0.0
+    for base, (pref_q, _) in PAIRS.items():
+        value = satisfaction(base, pref_responses, self_responses)
+        if value is None:
+            continue
+        weight = CATEGORY_WEIGHT[pref_q.category]
+        numerator += value * weight
+        denominator += weight
+    if denominator == 0:
+        return 0.0  # 비교 가능한 문항 없음. 0으로 나누지 않는다
+    return numerator / denominator * 100
+
+
+def pair_score(a_answers: dict, b_answers: dict) -> float:
+    """페어 점수 = min(A→B, B→A). 한쪽만 만족하는 짝을 걸러낸다."""
+    a_responses = a_answers.get("responses") or {}
+    b_responses = b_answers.get("responses") or {}
+    return min(
+        direction_score(a_responses, b_responses),
+        direction_score(b_responses, a_responses),
+    )
+
+
+# ── 절대질문 하드필터 (설계 §3.6) ─────────────────────────
+
+_SCALE_BASES = {"contact_freq", "date_freq", "alone_time", "affection"}
+ABSOLUTE_SCALE_MIN = 0.75
+
+
+def absolute_ok(pref_answers: dict, self_responses: dict) -> bool:
+    """pref 쪽이 지정한 절대질문을 상대가 전부 만족하는가."""
+    pref_responses = pref_answers.get("responses") or {}
+    for qid in pref_answers.get("absolute") or []:
+        if not qid.endswith(_PREF_SUFFIX):
+            continue
+        base = qid[: -len(_PREF_SUFFIX)]
+        if base not in PAIRS:
+            continue
+        value = satisfaction(base, pref_responses, self_responses)
+        if value is None:
+            continue  # 판정 불가는 탈락 사유로 쓰지 않는다
+        threshold = ABSOLUTE_SCALE_MIN if base in _SCALE_BASES else 1.0
+        if value < threshold:
+            return False
+    return True
+
+
+def pair_allowed(a_answers: dict, b_answers: dict) -> bool:
+    """양쪽 절대질문을 모두 통과해야 후보로 남는다."""
+    a_responses = a_answers.get("responses") or {}
+    b_responses = b_answers.get("responses") or {}
+    return absolute_ok(a_answers, b_responses) and absolute_ok(b_answers, a_responses)
