@@ -1596,8 +1596,10 @@ def test_missed_rounds_reset_and_increment():
 
     db.refresh(man), db.refresh(woman), db.refresh(lonely)
     assert man.missed_rounds == 0
-    assert woman.missed_rounds == 0
-    assert lonely.missed_rounds == 2  # 풀에 있었지만 못 붙었다
+    # 이월 보너스가 lonely(+15)를 밀어 올려 man과 붙는다 — 설계 §4.1
+    # adjusted(man,woman)=100+30+0=130 < adjusted(man,lonely)=100+30+15=145
+    assert lonely.missed_rounds == 0
+    assert woman.missed_rounds == 1  # 풀에 있었지만 못 붙었다
     db.close()
 
 
