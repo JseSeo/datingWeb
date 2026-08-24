@@ -178,3 +178,222 @@ def test_non_conflicting_guarantees_all_survive():
     ojakgyo = {(3, 4)}
     score = {(1, 2): 10.0, (3, 4): 10.0}
     assert matching.resolve_guarantees(red, ojakgyo, score) == [(1, 2), (3, 4)]
+
+
+import pytest
+
+
+NIGHT = {"sleep_self": "night", "sleep_pref": "night"}
+MORNING = {"sleep_self": "morning", "sleep_pref": "morning"}
+
+
+def test_run_matching_pairs_and_marks_round_done():
+    db = TestingSessionLocal()
+    man = make_user(db, "m@test.com", Gender.male, responses=NIGHT)
+    woman = make_user(db, "w@test.com", Gender.female, responses=NIGHT)
+    round_ = make_round(db)
+
+    result = matching.run_matching(db, round_.id)
+
+    assert result.matched == 1
+    assert result.unmatched == 0
+    assert result.guaranteed == 0
+    saved = db.query(Match).one()
+    # user_a = 남성, user_b = 여성 (설계 §6.1)
+    assert (saved.user_a_id, saved.user_b_id) == (man.id, woman.id)
+    assert saved.score == 100
+    db.refresh(round_)
+    assert round_.status == RoundStatus.done
+    assert round_.executed_at is not None
+    db.close()
+
+
+def test_absolute_question_removes_the_pair():
+    db = TestingSessionLocal()
+    make_user(db, "m@test.com", Gender.male,
+              responses=NIGHT, absolute=["sleep_pref"])
+    make_user(db, "w@test.com", Gender.female, responses=MORNING)
+    round_ = make_round(db)
+
+    result = matching.run_matching(db, round_.id)
+
+    assert result.matched == 0
+    assert result.unmatched == 2
+    assert db.query(Match).count() == 0
+    db.close()
+
+
+def test_past_pair_is_never_rematched():
+    db = TestingSessionLocal()
+    man = make_user(db, "m@test.com", Gender.male, responses=NIGHT)
+    woman = make_user(db, "w@test.com", Gender.female, responses=NIGHT)
+    old = make_round(db)
+    db.add(Match(user_a_id=man.id, user_b_id=woman.id,
+                 match_round_id=old.id, score=100))
+    old.status = RoundStatus.done
+    db.commit()
+
+    fresh = make_round(db)
+    result = matching.run_matching(db, fresh.id)
+
+    assert result.matched == 0
+    assert db.query(Match).filter(Match.match_round_id == fresh.id).count() == 0
+    db.close()
+
+
+def test_missed_rounds_reset_and_increment():
+    """이월 보너스는 그 사람이 낀 모든 페어에 더해져 최적 계산이 그 사람을 포함시키는
+    쪽으로 기운다 (설계 §4.1). lonely(+15)가 woman(+0)보다 우선한다 — 궁합은 동점(100)이다.
+    """
+    db = TestingSessionLocal()
+    man = make_user(db, "m@test.com", Gender.male, responses=NIGHT, missed_rounds=2)
+    woman = make_user(db, "w@test.com", Gender.female, responses=NIGHT)
+    lonely = make_user(db, "l@test.com", Gender.female, responses=NIGHT, missed_rounds=1)
+    round_ = make_round(db)
+
+    matching.run_matching(db, round_.id)
+
+    db.refresh(man), db.refresh(woman), db.refresh(lonely)
+    assert man.missed_rounds == 0
+    assert lonely.missed_rounds == 0
+    assert woman.missed_rounds == 1  # 풀에 있었지만 못 붙었다
+    db.close()
+
+
+def test_paused_user_missed_rounds_untouched():
+    """풀에 없는 유저는 우선순위를 쌓지 못한다 (설계 §4.1)."""
+    db = TestingSessionLocal()
+    paused = make_user(db, "p@test.com", Gender.female,
+                       responses=NIGHT, paused=True, missed_rounds=1)
+    make_user(db, "m@test.com", Gender.male, responses=NIGHT)
+    round_ = make_round(db)
+
+    matching.run_matching(db, round_.id)
+
+    db.refresh(paused)
+    assert paused.missed_rounds == 1
+    db.close()
+
+
+def test_carryover_bonus_cannot_override_compatibility():
+    """이월 보너스는 순위를 밀어줄 뿐 궁합을 뒤집지 못한다 — 상한의 목적 (설계 §4.1)."""
+    db = TestingSessionLocal()
+    man = make_user(db, "m@test.com", Gender.male, responses=NIGHT)
+    good = make_user(db, "good@test.com", Gender.female, responses=NIGHT)
+    waiting = make_user(db, "wait@test.com", Gender.female,
+                        responses=MORNING, missed_rounds=3)
+    round_ = make_round(db)
+
+    matching.run_matching(db, round_.id)
+
+    partner = db.query(Match).one()
+    # 궁합만 보면 good(100점)이지만 waiting은 45점 보너스 → 0 + 45 > 100? 아니다.
+    # 보너스가 궁합을 뒤집지 못하는 것이 상한의 목적이다
+    assert waiting.id not in (partner.user_a_id, partner.user_b_id)
+    assert good.id in (partner.user_a_id, partner.user_b_id)
+    assert man.id in (partner.user_a_id, partner.user_b_id)
+    db.close()
+
+
+def test_red_thread_guarantees_the_pair():
+    db = TestingSessionLocal()
+    man = make_user(db, "m@test.com", Gender.male, responses=MORNING,
+                    name="김남자", university="A대")
+    fated = make_user(db, "f@test.com", Gender.female, responses=MORNING,
+                      name="박여자", university="B대")
+    better = make_user(db, "b@test.com", Gender.female, responses=MORNING,
+                       name="최여자", university="C대")
+    db.add_all([
+        RedThread(user_id=man.id, target_name="박여자", target_university="B대"),
+        RedThread(user_id=fated.id, target_name="김남자", target_university="A대"),
+    ])
+    db.commit()
+    round_ = make_round(db)
+
+    result = matching.run_matching(db, round_.id)
+
+    assert result.guaranteed == 1
+    saved = db.query(Match).one()
+    assert saved.user_a_id in (man.id, fated.id)
+    assert saved.user_b_id in (man.id, fated.id)
+    assert better.id not in (saved.user_a_id, saved.user_b_id)
+    db.close()
+
+
+def test_absolute_question_beats_a_guarantee():
+    """절대질문이 보장을 이긴다 (설계 §4.3)."""
+    db = TestingSessionLocal()
+    man = make_user(db, "m@test.com", Gender.male, responses=NIGHT,
+                    absolute=["sleep_pref"], name="김남자", university="A대")
+    fated = make_user(db, "f@test.com", Gender.female, responses=MORNING,
+                      name="박여자", university="B대")
+    db.add_all([
+        RedThread(user_id=man.id, target_name="박여자", target_university="B대"),
+        RedThread(user_id=fated.id, target_name="김남자", target_university="A대"),
+    ])
+    db.commit()
+    round_ = make_round(db)
+
+    result = matching.run_matching(db, round_.id)
+
+    assert result.guaranteed == 0
+    assert db.query(Match).count() == 0
+    db.close()
+
+
+def test_uneven_gender_counts_leave_people_unmatched():
+    db = TestingSessionLocal()
+    make_user(db, "m1@test.com", Gender.male, responses=NIGHT)
+    make_user(db, "m2@test.com", Gender.male, responses=NIGHT)
+    make_user(db, "w@test.com", Gender.female, responses=NIGHT)
+    round_ = make_round(db)
+
+    result = matching.run_matching(db, round_.id)
+
+    assert result.matched == 1
+    assert result.unmatched == 1
+    db.close()
+
+
+def test_second_run_returns_conflict():
+    db = TestingSessionLocal()
+    make_user(db, "m@test.com", Gender.male, responses=NIGHT)
+    make_user(db, "w@test.com", Gender.female, responses=NIGHT)
+    round_ = make_round(db)
+
+    matching.run_matching(db, round_.id)
+    with pytest.raises(matching.RoundNotPending):
+        matching.run_matching(db, round_.id)
+    db.close()
+
+
+def test_missing_round_raises():
+    db = TestingSessionLocal()
+    with pytest.raises(matching.RoundNotFound):
+        matching.run_matching(db, 9999)
+    db.close()
+
+
+def test_same_input_produces_same_result():
+    """결정론성 (설계 §5.2). 같은 풀을 두 라운드에 넣어도 짝이 같아야 한다."""
+    db = TestingSessionLocal()
+    for i in range(3):
+        make_user(db, f"m{i}@test.com", Gender.male, responses=NIGHT)
+        make_user(db, f"w{i}@test.com", Gender.female, responses=NIGHT)
+    first = make_round(db)
+    matching.run_matching(db, first.id)
+    pairs_first = sorted(
+        (m.user_a_id, m.user_b_id)
+        for m in db.query(Match).filter(Match.match_round_id == first.id).all()
+    )
+    db.query(Match).delete()
+    db.commit()
+
+    second = make_round(db)
+    matching.run_matching(db, second.id)
+    pairs_second = sorted(
+        (m.user_a_id, m.user_b_id)
+        for m in db.query(Match).filter(Match.match_round_id == second.id).all()
+    )
+    assert pairs_first == pairs_second
+    db.close()

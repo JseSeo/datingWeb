@@ -1,13 +1,17 @@
 """매칭 파이프라인 오케스트레이션 (설계 §2). HTTP는 모른다."""
 
 from collections import Counter, defaultdict
+from dataclasses import dataclass
+from datetime import datetime
 
 from sqlalchemy.orm import Session
 
 from app.models.game import Ojakgyo, RedThread
-from app.models.match import Match
+from app.models.match import Match, MatchRound, RoundStatus
 from app.models.survey import Survey
-from app.models.user import User, UserStatus
+from app.models.user import Gender, User, UserStatus
+from app.services.pairing import optimal_pairs
+from app.services.scoring import pair_allowed, pair_score
 
 # 설계 §4.1 — 상한이 없으면 대기자끼리 묶이는 최악 궁합 매칭이 양산된다
 CARRYOVER_PER_ROUND = 15
@@ -136,3 +140,111 @@ def resolve_guarantees(
         used.update((a, b))
         confirmed.append((a, b))
     return confirmed
+
+
+class RoundNotFound(Exception):
+    """존재하지 않는 라운드."""
+
+
+class RoundNotPending(Exception):
+    """이미 실행 중이거나 완료된 라운드 — 중복 실행 방어 (설계 §5.5)."""
+
+
+@dataclass(frozen=True)
+class MatchingResult:
+    matched: int
+    unmatched: int
+    guaranteed: int
+
+
+def run_matching(db: Session, round_id: int) -> MatchingResult:
+    """라운드 하나를 실행한다. 실패하면 라운드를 pending으로 되돌린다."""
+    if db.get(MatchRound, round_id) is None:
+        raise RoundNotFound
+
+    # 조건부 UPDATE 한 번으로 검사와 선점을 동시에 한다 — 경쟁 구간이 없다
+    claimed = (
+        db.query(MatchRound)
+        .filter(MatchRound.id == round_id, MatchRound.status == RoundStatus.pending)
+        .update({MatchRound.status: RoundStatus.running}, synchronize_session=False)
+    )
+    db.commit()
+    if claimed == 0:
+        raise RoundNotPending
+
+    round_ = db.get(MatchRound, round_id)
+    try:
+        result = _execute(db, round_)
+        db.commit()
+        return result
+    except Exception:
+        db.rollback()
+        # 중간 실패는 전부 롤백된다. 절반만 매칭된 상태는 남지 않는다 (설계 §2)
+        round_.status = RoundStatus.pending
+        db.commit()
+        raise
+
+
+def _execute(db: Session, round_: MatchRound) -> MatchingResult:
+    pool = eligible_users(db)
+    answers = {user.id: (user.survey.answers or {}) for user in pool}
+    men = [u for u in pool if u.gender == Gender.male]
+    women = [u for u in pool if u.gender == Gender.female]
+    excluded = past_pairs(db)
+    red, ojakgyo_counts = game_signals(db, pool)
+
+    base: dict[tuple[int, int], float] = {}   # 보정 전 궁합 점수 (Match.score에 기록)
+    adjusted: dict[tuple[int, int], float] = {}  # 보정까지 얹은 매칭용 점수
+    for man in men:
+        for woman in women:
+            key = pair_key(man.id, woman.id)
+            if key in excluded:
+                continue
+            if not pair_allowed(answers[man.id], answers[woman.id]):
+                continue
+            score = pair_score(answers[man.id], answers[woman.id])
+            base[key] = score
+            bonus = carryover_bonus(man) + carryover_bonus(woman) + UNIVERSITY_BONUS
+            count = ojakgyo_counts.get(key, 0)
+            if 0 < count < OJAKGYO_GUARANTEE_COUNT:
+                bonus += OJAKGYO_BONUS * count
+            adjusted[key] = score + bonus
+
+    # 하드필터를 통과한 페어만 보장 대상이다 — 절대질문이 보장을 이긴다
+    guaranteed = resolve_guarantees(
+        red={key for key in red if key in base},
+        ojakgyo={
+            key for key, count in ojakgyo_counts.items()
+            if count >= OJAKGYO_GUARANTEE_COUNT and key in base
+        },
+        score=adjusted,
+    )
+    taken = {user_id for pair in guaranteed for user_id in pair}
+    remaining = {
+        key: value for key, value in adjusted.items()
+        if key[0] not in taken and key[1] not in taken
+    }
+
+    male_ids = {user.id for user in men}
+    pairs = guaranteed + optimal_pairs(remaining)
+    for a, b in pairs:
+        # user_a = 남성, user_b = 여성 (설계 §6.1). 유니크 제약 2개는 이 축 고정 위에서만
+        # "한 라운드 한 사람 한 번"을 보장한다 — id 대소로 정규화하면 사람이 축을 넘나들어 빠져나간다
+        man_id, woman_id = (a, b) if a in male_ids else (b, a)
+        db.add(Match(
+            user_a_id=man_id, user_b_id=woman_id,
+            match_round_id=round_.id,
+            score=int(round(base[pair_key(a, b)])),
+        ))
+
+    matched_ids = {user_id for pair in pairs for user_id in pair}
+    for user in pool:
+        user.missed_rounds = 0 if user.id in matched_ids else user.missed_rounds + 1
+
+    round_.status = RoundStatus.done
+    round_.executed_at = datetime.utcnow()
+    return MatchingResult(
+        matched=len(pairs),
+        unmatched=len(pool) - len(matched_ids),
+        guaranteed=len(guaranteed),
+    )
