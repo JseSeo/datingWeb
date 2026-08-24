@@ -75,3 +75,7 @@ def test_normal_user_is_forbidden(client: TestClient):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 403
+
+
+def test_requires_auth(client: TestClient):
+    assert client.post("/admin/match-rounds/9999/run").status_code == 401
