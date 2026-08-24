@@ -42,12 +42,19 @@ def test_ties_prefer_smaller_ids():
 
 
 def test_is_deterministic():
+    """입력 dict의 키 삽입 순서가 달라도 결과가 같아야 한다 (설계 §5.2).
+
+    1-2-4-6-5-3-1 6-사이클: 모든 간선이 동점(50.0)이라 완전 매칭이 정확히
+    둘 존재하고 tie-break 값도 정확히 같다 — 진짜 동점. 내부에서 입력을
+    정규화하지 않으면(간선 삽입 순서를 그대로 쓰면) 어느 쪽이 뽑힐지
+    입력 순서에 좌우된다는 것을 확인했다(정규화 제거 뮤테이션 시 FAIL).
+    """
     scores = {
-        (1, 4): 70.0, (1, 5): 70.0, (1, 6): 70.0,
-        (2, 4): 70.0, (2, 5): 70.0, (2, 6): 70.0,
-        (3, 4): 70.0, (3, 5): 70.0, (3, 6): 70.0,
+        (1, 2): 50.0, (2, 4): 50.0, (4, 6): 50.0,
+        (5, 6): 50.0, (3, 5): 50.0, (1, 3): 50.0,
     }
-    assert optimal_pairs(scores) == optimal_pairs(scores)
+    reversed_scores = dict(reversed(list(scores.items())))
+    assert optimal_pairs(scores) == optimal_pairs(reversed_scores)
 
 
 def test_leftover_when_counts_differ():
