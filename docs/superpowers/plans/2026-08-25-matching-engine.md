@@ -398,7 +398,7 @@ def test_living():
         ("h1", "서울", "서울", 1.0),    # 0홉
         ("h1", "서울", "경기", 0.5),    # 1홉
         ("h1", "서울", "강원", 0.0),    # 2홉
-        ("h2", "서울", "강원", 1.0),
+        ("h2", "서울", "강원", 0.5),    # 서울-경기-강원 … 2홉
         ("h2", "서울", "충남", 0.5),    # 서울-경기-충남 … 2홉
         ("h3", "서울", "부산", 0.0),    # 4홉 이상
         ("h3", "서울", "충북", 1.0),    # 2홉
@@ -1543,7 +1543,8 @@ def test_run_matching_pairs_and_marks_round_done():
     assert result.unmatched == 0
     assert result.guaranteed == 0
     saved = db.query(Match).one()
-    assert (saved.user_a_id, saved.user_b_id) == matching.pair_key(man.id, woman.id)
+    # user_a = 남성, user_b = 여성 (설계 §6.1)
+    assert (saved.user_a_id, saved.user_b_id) == (man.id, woman.id)
     assert saved.score == 100
     db.refresh(round_)
     assert round_.status == RoundStatus.done
@@ -1844,10 +1845,14 @@ def _execute(db: Session, round_: MatchRound) -> MatchingResult:
         if key[0] not in taken and key[1] not in taken
     }
 
+    male_ids = {user.id for user in men}
     pairs = guaranteed + optimal_pairs(remaining)
     for a, b in pairs:
+        # user_a = 남성, user_b = 여성 (설계 §6.1). 유니크 제약 2개는 이 축 고정 위에서만
+        # "한 라운드 한 사람 한 번"을 보장한다 — id 대소로 정규화하면 사람이 축을 넘나들어 빠져나간다
+        man_id, woman_id = (a, b) if a in male_ids else (b, a)
         db.add(Match(
-            user_a_id=a, user_b_id=b,
+            user_a_id=man_id, user_b_id=woman_id,
             match_round_id=round_.id,
             score=int(round(base[pair_key(a, b)])),
         ))
