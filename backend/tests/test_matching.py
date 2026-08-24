@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from unittest.mock import patch
 
 from app.models.game import Ojakgyo, RedThread
 from app.models.match import Match, MatchRound, RoundStatus
@@ -208,6 +209,21 @@ def test_run_matching_pairs_and_marks_round_done():
     db.close()
 
 
+def test_match_stores_male_as_user_a_even_when_female_id_is_smaller():
+    """저장 축은 성별로 고정된다 — id 대소로 되돌리면 이 테스트가 잡는다 (설계 §6.1)."""
+    db = TestingSessionLocal()
+    woman = make_user(db, "w@test.com", Gender.female, responses=NIGHT)
+    man = make_user(db, "m@test.com", Gender.male, responses=NIGHT)
+    assert woman.id < man.id  # 전제 확인: 여성 id가 더 작다
+    round_ = make_round(db)
+
+    matching.run_matching(db, round_.id)
+
+    saved = db.query(Match).one()
+    assert (saved.user_a_id, saved.user_b_id) == (man.id, woman.id)
+    db.close()
+
+
 def test_absolute_question_removes_the_pair():
     db = TestingSessionLocal()
     make_user(db, "m@test.com", Gender.male,
@@ -364,6 +380,23 @@ def test_second_run_returns_conflict():
     matching.run_matching(db, round_.id)
     with pytest.raises(matching.RoundNotPending):
         matching.run_matching(db, round_.id)
+    db.close()
+
+
+def test_mid_pipeline_failure_rolls_back_round_to_pending():
+    """중간 실패는 전부 롤백되고 라운드는 pending으로 돌아간다 (설계 §5.5)."""
+    db = TestingSessionLocal()
+    make_user(db, "m@test.com", Gender.male, responses=NIGHT)
+    make_user(db, "w@test.com", Gender.female, responses=NIGHT)
+    round_ = make_round(db)
+
+    with patch("app.services.matching.optimal_pairs", side_effect=RuntimeError("boom")):
+        with pytest.raises(RuntimeError):
+            matching.run_matching(db, round_.id)
+
+    db.refresh(round_)
+    assert round_.status == RoundStatus.pending
+    assert db.query(Match).count() == 0
     db.close()
 
 
