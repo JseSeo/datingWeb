@@ -1,5 +1,6 @@
 """매칭 파이프라인 오케스트레이션 (설계 §2). HTTP는 모른다."""
 
+import logging
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import datetime
@@ -12,6 +13,8 @@ from app.models.survey import Survey
 from app.models.user import Gender, User, UserStatus
 from app.services.pairing import optimal_pairs
 from app.services.scoring import pair_allowed, pair_score
+
+logger = logging.getLogger(__name__)
 
 # 설계 §4.1 — 상한이 없으면 대기자끼리 묶이는 최악 궁합 매칭이 양산된다
 CARRYOVER_PER_ROUND = 15
@@ -195,20 +198,35 @@ def _execute(db: Session, round_: MatchRound) -> MatchingResult:
 
     base: dict[tuple[int, int], float] = {}   # 보정 전 궁합 점수 (Match.score에 기록)
     adjusted: dict[tuple[int, int], float] = {}  # 보정까지 얹은 매칭용 점수
+    skipped: Counter[int] = Counter()  # 설문 응답 예외에 관여한 유저
     for man in men:
         for woman in women:
             key = pair_key(man.id, woman.id)
             if key in excluded:
                 continue
-            if not pair_allowed(answers[man.id], answers[woman.id]):
+            try:
+                if not pair_allowed(answers[man.id], answers[woman.id]):
+                    continue
+                score = pair_score(answers[man.id], answers[woman.id])
+            except Exception:
+                # 설문 응답은 저장 시 검증되지 않아 예외 종류를 열거할 수 없다.
+                # 잘못된 값 한 건이 라운드 전체를 롤백시키지 않게 그 페어만 버린다.
+                # 원인 유저는 자기가 낀 거의 모든 페어에서 실패해 아래 로그에 드러난다
+                skipped[man.id] += 1
+                skipped[woman.id] += 1
                 continue
-            score = pair_score(answers[man.id], answers[woman.id])
             base[key] = score
             bonus = carryover_bonus(man) + carryover_bonus(woman) + UNIVERSITY_BONUS
             count = ojakgyo_counts.get(key, 0)
             if 0 < count < OJAKGYO_GUARANTEE_COUNT:
                 bonus += OJAKGYO_BONUS * count
             adjusted[key] = score + bonus
+
+    if skipped:
+        logger.error(
+            "설문 응답 오류로 건너뛴 페어 있음 — 유저별 실패 수 상위: %s",
+            skipped.most_common(10),
+        )
 
     # 하드필터를 통과한 페어만 보장 대상이다 — 절대질문이 보장을 이긴다
     guaranteed = resolve_guarantees(

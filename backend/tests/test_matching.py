@@ -430,3 +430,48 @@ def test_same_input_produces_same_result():
     )
     assert pairs_first == pairs_second
     db.close()
+
+
+# ── C1 최소 봉합: 검증되지 않은 설문 응답 ──────────────────
+
+BROKEN_ORDINAL = {"politics_pref": ["progressive"], "politics_self": "moderate"}
+
+
+def test_broken_answer_skips_only_that_pair_not_the_round(caplog):
+    """설문 응답 예외 한 건이 라운드 전체를 롤백시키지 않는다 (C1)."""
+    db = TestingSessionLocal()
+    man = make_user(db, "m@test.com", Gender.male, responses=NIGHT)
+    woman = make_user(db, "w@test.com", Gender.female, responses=NIGHT)
+    broken = make_user(db, "b@test.com", Gender.female,
+                       responses=NIGHT, absolute=[7])
+    round_ = make_round(db)
+
+    with caplog.at_level("ERROR"):
+        result = matching.run_matching(db, round_.id)
+
+    assert result.matched == 1
+    saved = db.query(Match).one()
+    assert (saved.user_a_id, saved.user_b_id) == (man.id, woman.id)
+    db.refresh(round_)
+    assert round_.status == RoundStatus.done
+    db.refresh(broken)
+    assert broken.missed_rounds == 1  # 매칭 안 됐으니 이월은 쌓인다
+    # 원인 유저는 실패 횟수로 로그에 드러난다
+    assert any(str(broken.id) in record.getMessage() for record in caplog.records)
+    db.close()
+
+
+def test_ordinal_pref_given_a_list_does_not_crash_the_round():
+    """`politics_pref`에 리스트 → `_ordinal`의 `order.get`이 TypeError (C1)."""
+    db = TestingSessionLocal()
+    make_user(db, "m@test.com", Gender.male, responses=BROKEN_ORDINAL)
+    make_user(db, "w@test.com", Gender.female,
+              responses={**NIGHT, "politics_self": "moderate"})
+    round_ = make_round(db)
+
+    result = matching.run_matching(db, round_.id)
+
+    assert result.matched == 0
+    db.refresh(round_)
+    assert round_.status == RoundStatus.done
+    db.close()
