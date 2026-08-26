@@ -475,3 +475,35 @@ def test_ordinal_pref_given_a_list_does_not_crash_the_round():
     db.refresh(round_)
     assert round_.status == RoundStatus.done
     db.close()
+
+
+def test_guarantee_conflict_uses_base_score_not_the_adjusted_one():
+    """보장 충돌 tie-break는 이월 보너스가 얹히기 전 궁합 점수로 갈린다 (설계 §4.3).
+
+    A는 B·C 둘 다와 붉은실 상호다. base는 A–B(100) > A–C(75)지만
+    C의 이월 보너스(+30)를 얹은 adjusted는 A–C(105) > A–B(100)로 뒤집힌다.
+    `score=adjusted`를 넘기면 A–C가 확정되어 이 테스트가 실패한다.
+    """
+    db = TestingSessionLocal()
+    man = make_user(db, "m@test.com", Gender.male, name="김남자", university="A대",
+                    responses={"contact_freq_self": 3, "contact_freq_pref": 3})
+    better = make_user(db, "b@test.com", Gender.female, name="박여자", university="B대",
+                       responses={"contact_freq_self": 3, "contact_freq_pref": 3})
+    waiting = make_user(db, "c@test.com", Gender.female, name="최여자", university="C대",
+                        missed_rounds=2,
+                        responses={"contact_freq_self": 2, "contact_freq_pref": 3})
+    db.add_all([
+        RedThread(user_id=man.id, target_name="박여자", target_university="B대"),
+        RedThread(user_id=man.id, target_name="최여자", target_university="C대"),
+        RedThread(user_id=better.id, target_name="김남자", target_university="A대"),
+        RedThread(user_id=waiting.id, target_name="김남자", target_university="A대"),
+    ])
+    db.commit()
+    round_ = make_round(db)
+
+    result = matching.run_matching(db, round_.id)
+
+    assert result.guaranteed == 1
+    saved = db.query(Match).one()
+    assert (saved.user_a_id, saved.user_b_id) == (man.id, better.id)
+    db.close()

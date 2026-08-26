@@ -235,7 +235,8 @@ def _execute(db: Session, round_: MatchRound) -> MatchingResult:
             key for key, count in ojakgyo_counts.items()
             if count >= OJAKGYO_GUARANTEE_COUNT and key in base
         },
-        score=adjusted,
+        # 설계 §4.3의 tie-break 기준은 보정 전 궁합 점수다 — 이월·오작교 보너스는 안 쓴다
+        score=base,
     )
     taken = {user_id for pair in guaranteed for user_id in pair}
     remaining = {
