@@ -273,6 +273,8 @@ def test_missed_rounds_reset_and_increment():
     assert man.missed_rounds == 0
     assert lonely.missed_rounds == 0
     assert woman.missed_rounds == 1  # 풀에 있었지만 못 붙었다
+    # Match.score는 보정 전 값이다 — adjusted(100+30+15=145)를 저장하면 여기서 잡힌다
+    assert db.query(Match).one().score == 100
     db.close()
 
 
