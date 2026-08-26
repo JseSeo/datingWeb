@@ -99,7 +99,11 @@ def create_round(
 
 
 def _get_editable_round(db: Session, round_id: int, action: str) -> MatchRound:
-    """404 → done 잠금 순으로 판정. done은 실행이 만든 상태라 손대지 않는다."""
+    """404 → 상태 잠금 순으로 판정.
+
+    pending만 손댈 수 있다. done은 실행이 만든 상태라 손대지 않고,
+    running은 _execute가 도는 중이라 건드리면 매칭 결과가 없는 라운드를 참조한다.
+    """
     round_ = db.get(MatchRound, round_id)
     if round_ is None:
         raise HTTPException(
@@ -110,6 +114,11 @@ def _get_editable_round(db: Session, round_id: int, action: str) -> MatchRound:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"완료된 라운드는 {action}할 수 없습니다",
+        )
+    if round_.status == RoundStatus.running:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"실행 중인 라운드는 {action}할 수 없습니다",
         )
     return round_
 

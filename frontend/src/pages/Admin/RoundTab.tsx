@@ -173,8 +173,12 @@ export default function RoundTab() {
                   <Button onClick={() => handleRun(round.id)} disabled={running === round.id}>
                     {running === round.id ? "실행 중…" : "매칭 실행"}
                   </Button>
-                  <Button onClick={() => startEdit(round)}>수정</Button>
-                  <Button onClick={() => handleDelete(round.id)}>삭제</Button>
+                  <Button onClick={() => startEdit(round)} disabled={running === round.id}>
+                    수정
+                  </Button>
+                  <Button onClick={() => handleDelete(round.id)} disabled={running === round.id}>
+                    삭제
+                  </Button>
                 </div>
               )}
               {summary?.id === round.id && (

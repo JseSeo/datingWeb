@@ -214,6 +214,18 @@ def test_update_rejects_done_round(admin_client: TestClient):
     assert res.json()["detail"] == "완료된 라운드는 수정할 수 없습니다"
 
 
+def test_update_rejects_running_round(admin_client: TestClient):
+    """실행 중 라운드를 고치면 _execute가 도는 도중 데이터가 바뀐다."""
+    [round_id] = _add_rounds(
+        MatchRound(scheduled_at=_hours(24), status=RoundStatus.running)
+    )
+    res = admin_client.put(
+        f"/admin/match-rounds/{round_id}", json={"scheduled_at": _iso(48)}
+    )
+    assert res.status_code == 409
+    assert res.json()["detail"] == "실행 중인 라운드는 수정할 수 없습니다"
+
+
 def test_update_missing_round_returns_404(admin_client: TestClient):
     res = admin_client.put(
         "/admin/match-rounds/9999", json={"scheduled_at": _iso(24)}
@@ -245,6 +257,16 @@ def test_delete_rejects_done_round(admin_client: TestClient):
     res = admin_client.delete(f"/admin/match-rounds/{round_id}")
     assert res.status_code == 409
     assert res.json()["detail"] == "완료된 라운드는 삭제할 수 없습니다"
+
+
+def test_delete_rejects_running_round(admin_client: TestClient):
+    """실행 중 라운드가 지워지면 Match INSERT가 없는 라운드를 참조한다."""
+    [round_id] = _add_rounds(
+        MatchRound(scheduled_at=_hours(24), status=RoundStatus.running)
+    )
+    res = admin_client.delete(f"/admin/match-rounds/{round_id}")
+    assert res.status_code == 409
+    assert res.json()["detail"] == "실행 중인 라운드는 삭제할 수 없습니다"
 
 
 def test_delete_missing_round_returns_404(admin_client: TestClient):

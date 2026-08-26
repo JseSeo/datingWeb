@@ -229,6 +229,24 @@ describe("매칭 실행", () => {
     expect(screen.queryByRole("button", { name: "매칭 실행" })).toBeNull();
   });
 
+  it("실행 요청이 도는 동안 수정·삭제 버튼이 잠긴다", async () => {
+    vi.spyOn(api, "listMatchRounds").mockResolvedValue([
+      { id: 1, scheduled_at: "2026-09-01T10:00:00", status: "pending" },
+    ]);
+    // 요청이 끝나지 않은 상태를 만든다 — 그동안 로컬 status는 아직 "pending"이다
+    vi.spyOn(api, "runMatchRound").mockReturnValue(new Promise(() => {}));
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    render(<RoundTab />);
+    fireEvent.click(await screen.findByRole("button", { name: "매칭 실행" }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "실행 중…" })).toBeDisabled(),
+    );
+    expect(screen.getByRole("button", { name: "수정" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "삭제" })).toBeDisabled();
+  });
+
   it("실행 실패 메시지를 보여준다", async () => {
     vi.spyOn(api, "listMatchRounds").mockResolvedValue([
       { id: 1, scheduled_at: "2026-09-01T10:00:00", status: "pending" },
