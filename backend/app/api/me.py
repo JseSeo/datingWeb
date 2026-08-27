@@ -1,3 +1,4 @@
+import logging
 import os
 import uuid
 
@@ -14,8 +15,13 @@ from app.models.verification import StudentVerification
 from app.schemas.survey import SurveyOut, SurveySubmit
 from app.schemas.user import MatchingPauseUpdate, ProfileUpdate, UserOut
 from app.schemas.verification import VerificationOut
+from app.survey.validation import sanitize_responses
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/me", tags=["me"])
+
+_PREF_SUFFIX = "_pref"
 
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
@@ -32,6 +38,27 @@ def _validate_answers(answers: dict) -> None:
         raise HTTPException(status_code=400, detail="절대질문은 최대 2개입니다")
     if any(qid not in responses for qid in absolute):
         raise HTTPException(status_code=400, detail="절대질문은 응답한 문항만 가능합니다")
+
+
+def _sanitized(answers: dict, user_id: int) -> dict:
+    """카탈로그로 검증한 값만 남긴다. 위반은 400이 아니라 버린다.
+
+    거절 대신 버리는 이유: 유일한 클라이언트가 우리 프론트라, 카탈로그가 바뀌는
+    사이 오래된 탭을 열어둔 유저가 저장 자체를 못 하게 되는 쪽이 더 나쁘다.
+
+    `absolute`는 두 번 걸러진다. 값이 버려진 문항을 가리키는 고아를 없애고
+    (구조 검증은 버리기 전에 돌아 이걸 못 잡는다), `_pref`가 아닌 문항도 뺀다
+    — `absolute_ok`가 어차피 무시하므로 남겨두면 유저에게 거짓말이 된다.
+    """
+    responses, dropped = sanitize_responses(answers["responses"])
+    absolute = [
+        qid for qid in answers["absolute"]
+        if qid in responses and qid.endswith(_PREF_SUFFIX)
+    ]
+    if dropped:
+        logger.warning("설문 응답 %d건을 버렸다 (user_id=%s): %s",
+                       len(dropped), user_id, ", ".join(dropped))
+    return {"responses": responses, "absolute": absolute}
 
 
 @router.get("", response_model=UserOut)
@@ -184,11 +211,12 @@ def save_survey(
     current_user: User = Depends(get_current_user),
 ):
     _validate_answers(payload.answers)
+    answers = _sanitized(payload.answers, current_user.id)
     survey = db.query(Survey).filter(Survey.user_id == current_user.id).first()
     if survey:
-        survey.answers = payload.answers
+        survey.answers = answers
     else:
-        survey = Survey(user_id=current_user.id, answers=payload.answers)
+        survey = Survey(user_id=current_user.id, answers=answers)
         db.add(survey)
     db.commit()
     db.refresh(survey)
