@@ -182,3 +182,26 @@ def test_카탈로그_응답에_category는_노출하지_않는다(client: TestC
     """카테고리 가중치는 내부 매칭 로직 전용이다. 프론트에 흘리지 않는다."""
     body = client.get("/survey/questions", headers=_headers(client)).json()
     assert "category" not in body["questions"][0]
+
+
+def test_number_question_declares_range():
+    """number 문항은 검증 범위를 카탈로그에 선언해야 한다 (검증기가 이걸 읽는다)."""
+    from app.survey.catalog import QUESTIONS
+
+    for q in QUESTIONS:
+        if q.type == "number":
+            assert q.min is not None, f"{q.id}에 min이 없다"
+            assert q.max is not None, f"{q.id}에 max가 없다"
+
+
+def test_catalog_response_exposes_number_range(client: TestClient):
+    """프론트 input이 min/max를 그대로 받아야 한다.
+
+    서버만 범위를 알면, 범위를 벗어난 값은 조용히 버려지고 유저는
+    저장했다고 믿는다 (이 API는 위반 값을 400으로 되돌리지 않는다).
+    """
+    res = client.get("/survey/questions", headers=_headers(client))
+    assert res.status_code == 200
+    height = next(q for q in res.json()["questions"] if q["id"] == "height_self")
+    assert height["min"] == 120
+    assert height["max"] == 220

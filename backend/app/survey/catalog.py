@@ -46,6 +46,8 @@ class Question:
     rank_items: list[Choice] | None = None
     scale_labels: tuple[str, str] | None = None
     unit: str | None = None
+    min: int | None = None  # number 타입 전용. 검증기와 프론트 input이 함께 읽는다
+    max: int | None = None
     male_only: bool = False
     no_pref_id: str | None = None
 
@@ -73,7 +75,7 @@ QUESTIONS: list[Question] = [
     # ── 6.1 외모·스타일 ──
     Question(
         id="height_self", section="self", label="내 키", type="number",
-        category=Category.APPEARANCE, unit="cm",
+        category=Category.APPEARANCE, unit="cm", min=120, max=220,
     ),
     Question(
         id="height_pref", section="partner", label="원하는 상대 키", type="single",
