@@ -1,12 +1,13 @@
 import enum
 from datetime import datetime
-from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer
+from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 
 class RoundStatus(str, enum.Enum):
     pending = "pending"
+    running = "running"  # 실행 중. 서버가 죽으면 여기 멈춰 관리자가 인지한다 (설계 §5.5)
     done = "done"
 
 
@@ -29,6 +30,11 @@ class MatchRound(Base):
 
 class Match(Base):
     __tablename__ = "matches"
+    # 한 라운드에서 한 사람이 두 번 매칭되는 사고를 DB가 막는다 (설계 §6.1)
+    __table_args__ = (
+        UniqueConstraint("match_round_id", "user_a_id", name="uq_matches_round_user_a"),
+        UniqueConstraint("match_round_id", "user_b_id", name="uq_matches_round_user_b"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     user_a_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
@@ -36,6 +42,8 @@ class Match(Base):
     match_round_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("match_rounds.id"), nullable=False
     )
+    # 보정 전 궁합 점수. 카테고리 가중치를 나중에 조정하려면 이 기록이 필요하다 (설계 §6.1)
+    score: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
     matched_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, nullable=False
     )

@@ -37,6 +37,10 @@ class User(Base):
     kakao_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
     matching_paused: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # 이월 보너스 계산용. 매칭 실행 시 매칭된 사람은 0, 안 된 사람은 +1 (설계 §4.1)
+    missed_rounds: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0", nullable=False
+    )
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, nullable=False

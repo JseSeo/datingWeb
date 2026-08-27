@@ -111,3 +111,9 @@
   flex: 1;
   font-size: 14px;
 }
+
+.summary {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #999;
+}
