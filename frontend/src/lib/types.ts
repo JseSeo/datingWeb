@@ -165,6 +165,8 @@ export interface Question {
   type: QuestionType;
   choices?: Choice[] | null;
   face?: boolean;
+  min?: number | null;
+  max?: number | null;
   rank_items?: Choice[] | null;
   scale_labels?: [string, string] | null;
   unit?: string | null;

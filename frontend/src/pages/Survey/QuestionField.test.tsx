@@ -21,6 +21,7 @@ const multi: Question = {
 };
 const number: Question = {
   id: "q_number", section: "self", label: "숫자", type: "number", unit: "cm",
+  min: 120, max: 220,
 };
 const ranking: Question = {
   id: "q_ranking", section: "self", label: "순위", type: "ranking",
@@ -198,5 +199,22 @@ describe("QuestionField", () => {
     );
     fireEvent.click(screen.getByRole("checkbox", { name: FACE_TYPES[0].label }));
     expect(onChange).toHaveBeenCalledWith([]);
+  });
+
+  it("number: 카탈로그의 min/max를 input에 그대로 건다", () => {
+    // 서버가 범위 밖 값을 조용히 버리므로, 입력 단계에서 막아야 유저가
+    // "저장했는데 값이 없다"를 겪지 않는다
+    render(
+      <QuestionField
+        question={number}
+        value={undefined}
+        onChange={vi.fn()}
+        faceTypes={FACE_TYPES}
+        faceAnyId={FACE_ANY_ID}
+      />,
+    );
+    const input = screen.getByRole("spinbutton");
+    expect(input).toHaveAttribute("min", "120");
+    expect(input).toHaveAttribute("max", "220");
   });
 });

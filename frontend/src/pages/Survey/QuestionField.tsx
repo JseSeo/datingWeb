@@ -72,6 +72,7 @@ export function QuestionField({
     return (
       <div className={styles.field}>
         <input type="number" className={styles.number}
+          min={q.min ?? undefined} max={q.max ?? undefined}
           value={typeof value === "number" ? value : ""}
           onChange={(e) => {
             const v = e.target.value;
