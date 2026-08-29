@@ -7,6 +7,7 @@ import {
   updateMatchRound,
   deleteMatchRound,
   runMatchRound,
+  resetMatchRound,
 } from "../../lib/api";
 import type { AdminMatchRoundOut, MatchingRunOut } from "../../lib/types";
 import { formatKST, kstInputToUtcISO, utcISOToKstInput } from "../../lib/datetime";
@@ -109,6 +110,23 @@ export default function RoundTab() {
     }
   }
 
+  async function handleReset(id: number) {
+    // 살아 있는 라운드를 되돌리면 이중 실행이 난다. 서버도 유예로 막지만 여기서 한 번 더 묻는다
+    if (
+      !window.confirm(
+        "서버가 죽어 멈춘 라운드만 되돌리세요. 실행 중이면 이중 실행됩니다. 되돌릴까요?",
+      )
+    )
+      return;
+    setError("");
+    try {
+      const updated = await resetMatchRound(id);
+      setItems((prev) => sortDesc(prev.map((r) => (r.id === id ? updated : r))));
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
+
   async function handleRun(id: number) {
     // 되돌릴 수 없는 작업이라 한 번 더 묻는다
     if (!window.confirm("이 라운드의 매칭을 실행할까요? 되돌릴 수 없어요.")) return;
@@ -179,6 +197,11 @@ export default function RoundTab() {
                   <Button onClick={() => handleDelete(round.id)} disabled={running === round.id}>
                     삭제
                   </Button>
+                </div>
+              )}
+              {round.status === "running" && (
+                <div className={styles.actions}>
+                  <Button onClick={() => handleReset(round.id)}>되돌리기</Button>
                 </div>
               )}
               {summary?.id === round.id && (

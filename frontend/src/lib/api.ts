@@ -261,3 +261,9 @@ export function runMatchRound(id: number): Promise<MatchingRunOut> {
     method: "POST",
   });
 }
+
+export function resetMatchRound(id: number): Promise<AdminMatchRoundOut> {
+  return apiFetch<AdminMatchRoundOut>(`/admin/match-rounds/${id}/reset`, {
+    method: "POST",
+  });
+}
