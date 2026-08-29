@@ -21,6 +21,9 @@ class MatchRound(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     scheduled_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     executed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # 마지막 실행을 시작한 시각. running 선점 때 기록되고 지워지지 않는다.
+    # 되돌리기 유예(RUNNING_GRACE) 판정의 기준값이다
+    started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     status: Mapped[RoundStatus] = mapped_column(
         Enum(RoundStatus, name="round_status"), default=RoundStatus.pending, nullable=False
     )
