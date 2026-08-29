@@ -420,3 +420,26 @@ def test_reset_requires_auth(client: TestClient):
         MatchRound(scheduled_at=_hours(-1), status=RoundStatus.running)
     )
     assert client.post(f"/admin/match-rounds/{round_id}/reset").status_code == 401
+
+
+def test_reset_rejects_just_before_the_grace_period_ends(admin_client: TestClient):
+    """유예 임계값을 잠근다 — RUNNING_GRACE를 줄이면 이 테스트가 깨진다."""
+    [round_id] = _add_rounds(MatchRound(
+        scheduled_at=_hours(-1),
+        status=RoundStatus.running,
+        started_at=datetime.utcnow() - timedelta(minutes=9, seconds=59),
+    ))
+    res = admin_client.post(f"/admin/match-rounds/{round_id}/reset")
+    assert res.status_code == 409
+
+
+def test_reset_allows_just_after_the_grace_period_ends(admin_client: TestClient):
+    """반대쪽 경계 — RUNNING_GRACE를 늘리면 이 테스트가 깨진다."""
+    [round_id] = _add_rounds(MatchRound(
+        scheduled_at=_hours(-1),
+        status=RoundStatus.running,
+        started_at=datetime.utcnow() - timedelta(minutes=10, seconds=1),
+    ))
+    res = admin_client.post(f"/admin/match-rounds/{round_id}/reset")
+    assert res.status_code == 200
+    assert res.json()["status"] == "pending"
