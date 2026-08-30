@@ -100,8 +100,10 @@ def test_handles_one_against_many():
 def test_works_with_large_sparse_ids():
     """실제 user id는 크고 띄엄띄엄하다.
 
-    tie 항을 raw id로 계산하면 가중치가 float64 정확 범위를 넘어 정밀도
-    가드에 걸린다. 순번으로 계산해야 통과한다.
+    tie 항을 raw id로 계산하면 `(123456 - 50000)**2` 같은 큰 값이
+    `base * big`(수백만 단위)을 통째로 삼켜 모든 실제 페어의 profit이 미매칭
+    (0점)보다도 낮아진다 — 정밀도 가드가 걸리는 게 아니라 아무도 안 붙는 빈
+    결과가 나온다. 순번 차이로 계산해야 tie 항이 작게 유지돼 이 문제가 없다.
     """
     scores = {
         (50_000, 123_456): 50.0,
@@ -130,3 +132,28 @@ def test_result_is_the_same_whichever_side_is_male():
         optimal_pairs(scores, male_ids={1, 2})
         == optimal_pairs(scores, male_ids={3, 4})
     )
+
+
+def test_never_selects_a_forbidden_cell():
+    """빈 칸(간선 없음)이 실제로 선택 불가능한지 확인한다.
+
+    (2, 4)는 점수표에 없다 — 행렬에서 진짜 `_FORBIDDEN` 칸이 된다. 최적해는
+    1-3만 남기고 2, 4를 미매칭으로 두므로(그 forbidden 칸의 두 끝점이 실제로
+    논다), `_FORBIDDEN`이 선택 가능한 값이 되면 짝이 하나 더 생긴다. 하드코딩된
+    리스트 대신 "반환된 모든 페어가 입력 점수표의 키다"라는 성질로 검증한다 —
+    이 성질은 scipy가 동점을 어느 쪽으로 풀든 살아남는다.
+    """
+    scores = {(1, 3): 90.0, (1, 4): 1.0, (2, 3): 1.0}
+    normalized_keys = {(1, 3), (1, 4), (2, 3)}
+    result = optimal_pairs(scores, male_ids={1, 2})
+    assert all(pair in normalized_keys for pair in result)
+
+
+def test_rejects_large_negative_weights_beyond_float64_exact_range():
+    """음수 점수도 절대값 기준으로 정밀도 가드가 걸려야 한다.
+
+    가드가 `max(...)`만 쓰면 음수 가중치의 최댓값은 음수라 곱도 음수가 되어
+    `> _EXACT_INT_LIMIT` 비교가 항상 거짓이 된다 — 가드가 조용히 안 걸린다.
+    """
+    with pytest.raises(ValueError):
+        optimal_pairs({(1, 2): -1e12}, male_ids={1})

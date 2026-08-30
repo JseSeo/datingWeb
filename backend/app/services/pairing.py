@@ -15,15 +15,20 @@ def optimal_pairs(
     scores: Mapping[tuple[int, int], float],
     male_ids: Collection[int],
 ) -> list[tuple[int, int]]:
-    """점수 합이 최대가 되는 짝 목록. 같은 입력은 항상 같은 결과를 낸다.
+    """점수 합이 최대가 되는 짝 목록. 같은 입력은 항상 같은 결과를 낸다 — 행렬이
+    입력만으로 완전히 결정되고 `linear_sum_assignment`가 결정적이기 때문이다.
 
     가중치를 `점수 × big − tie` 형태의 정수로 만든다. tie 항의 총합이 big보다
-    작으므로 점수 합이 항상 우선하고, 점수가 같을 때만 tie가 승부를 가른다.
+    작으므로 점수 합이 항상 우선한다.
 
     tie는 두 사람의 **등장 순번** 차이의 제곱이다. 제곱이라 순번이 먼 페어가
-    급격히 손해를 보고, 동점일 때는 앞 순번끼리 먼저 묶이는 조합이 이긴다
-    (설계 §5.2). raw user id로 계산하면 가중치가 float64의 정확 정수 범위를
-    넘어 tie가 반올림에 먹힌다.
+    급격히 손해를 봐 앞 순번끼리 묶이는 쪽으로 편향된다. 다만 이 편향이 승부를
+    유일하게 결정하지는 않는다 — 간선이 빠진 그래프에서 3쌍 이상이면 점수 합과
+    tie 합이 둘 다 같은 경우가 생길 수 있고, 그때는 scipy 내부 규칙이 남은
+    동점을 가른다.
+
+    raw user id로 tie를 계산하면 가중치가 float64의 정확 정수 범위를 넘어
+    tie 항이 실제 점수 차이를 삼켜버린다 — 그래서 순번을 쓴다.
 
     행렬은 미매칭 슬롯까지 포함한 정사각이다. 미매칭이 항상 0점으로 가능하므로
     헝가리안이 강제하는 전원 매칭이 목적함수를 바꾸지 않는다.
@@ -46,7 +51,7 @@ def optimal_pairs(
     def _base(value: float) -> int:
         return int(round(value * _SCALE)) + _MATCH_BONUS
 
-    if max(_base(v) for v in normalized.values()) * big > _EXACT_INT_LIMIT:
+    if max(abs(_base(v)) for v in normalized.values()) * big > _EXACT_INT_LIMIT:
         raise ValueError(
             f"가중치가 float64 정확 정수 범위를 넘는다 (풀 {total}명). "
             "점수 스케일을 줄여야 한다"
