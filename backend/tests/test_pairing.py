@@ -123,7 +123,7 @@ def test_works_with_large_sparse_ids():
 def test_rejects_weights_beyond_float64_exact_range():
     """가중치가 2**53을 넘으면 tie가 반올림에 먹혀 tie-break가 조용히 무력화된다.
 
-    노드 2개에 거대한 점수를 줘서 곱을 넘긴다 — 5,600명을 만들 필요가 없다.
+    노드 2개에 거대한 점수를 줘서 곱을 넘긴다 — 그 규모를 만들 필요가 없다.
     """
     with pytest.raises(ValueError):
         optimal_pairs({(1, 2): 1e12}, male_ids={1})

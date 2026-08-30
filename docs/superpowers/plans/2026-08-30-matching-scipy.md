@@ -147,7 +147,7 @@ def test_works_with_large_sparse_ids():
 def test_rejects_weights_beyond_float64_exact_range():
     """가중치가 2**53을 넘으면 tie가 반올림에 먹혀 tie-break가 조용히 무력화된다.
 
-    노드 2개에 거대한 점수를 줘서 곱을 넘긴다 — 그 규모를 만들 필요가 없다.
+    노드 2개에 거대한 점수를 줘서 곱을 넘긴다 — 5,600명을 만들 필요가 없다.
     """
     with pytest.raises(ValueError):
         optimal_pairs({(1, 2): 1e12}, male_ids={1})
@@ -514,7 +514,7 @@ git commit -m "perf(backend): eligible_users 설문 N+1 제거"
     병목은 이제 짝 계산이 아니라 점수 계산이다 (O(n²)). 2,000명대에서 다시 검토한다.
 
     **한계.** float64는 정수를 2⁵³까지만 정확히 담는다. 가중치가 이를 넘으면 tie 항이
-    반올림에 먹혀 §5.2의 결정론이 조용히 깨지므로, 넘으면 예외를 던진다. 풀 약 4,100명이
+    반올림에 먹혀 §5.2의 결정론이 조용히 깨지므로, 넘으면 예외를 던진다. 풀 약 5,600명이
     한계이며 그때는 점수 스케일 축소가 필요하다.
 
     교체 이력과 실측 근거: `2026-08-30-matching-performance-design.md`
