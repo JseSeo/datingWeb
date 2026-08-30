@@ -5,7 +5,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.game import Ojakgyo, RedThread
 from app.models.match import Match, MatchRound, RoundStatus
@@ -37,6 +37,7 @@ def eligible_users(db: Session) -> list[User]:
     return (
         db.query(User)
         .join(Survey, Survey.user_id == User.id)
+        .options(joinedload(User.survey))
         .filter(
             User.status == UserStatus.active,
             User.matching_paused.is_(False),
@@ -245,7 +246,7 @@ def _execute(db: Session, round_: MatchRound) -> MatchingResult:
     }
 
     male_ids = {user.id for user in men}
-    pairs = guaranteed + optimal_pairs(remaining)
+    pairs = guaranteed + optimal_pairs(remaining, male_ids)
     for a, b in pairs:
         # user_a = 남성, user_b = 여성 (설계 §6.1). 유니크 제약 2개는 이 축 고정 위에서만
         # "한 라운드 한 사람 한 번"을 보장한다 — id 대소로 정규화하면 사람이 축을 넘나들어 빠져나간다
