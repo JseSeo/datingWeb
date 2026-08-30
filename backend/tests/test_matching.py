@@ -509,3 +509,31 @@ def test_guarantee_conflict_uses_base_score_not_the_adjusted_one():
     saved = db.query(Match).one()
     assert (saved.user_a_id, saved.user_b_id) == (man.id, better.id)
     db.close()
+
+
+def test_eligible_users_loads_surveys_in_one_query():
+    """설문을 유저마다 따로 읽으면 1,000명에 쿼리가 1,001번 나간다 (후속 티켓 M1).
+
+    joinedload가 빠지면 아래 설문 접근이 추가 SELECT를 일으켜 카운트가 늘어난다.
+    """
+    from sqlalchemy import event
+
+    db = TestingSessionLocal()
+    for i in range(5):
+        make_user(db, f"n{i}@test.com", responses=NIGHT)
+
+    statements = []
+
+    def record(conn, cursor, statement, *args):
+        statements.append(statement)
+
+    event.listen(db.bind, "before_cursor_execute", record)
+    try:
+        users = matching.eligible_users(db)
+        _ = [u.survey.answers for u in users]  # 설문을 실제로 만진다
+    finally:
+        event.remove(db.bind, "before_cursor_execute", record)
+
+    selects = [s for s in statements if s.strip().upper().startswith("SELECT")]
+    assert len(selects) == 1, f"쿼리 {len(selects)}번: {selects}"
+    db.close()

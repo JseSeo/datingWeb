@@ -5,7 +5,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.game import Ojakgyo, RedThread
 from app.models.match import Match, MatchRound, RoundStatus
@@ -37,6 +37,7 @@ def eligible_users(db: Session) -> list[User]:
     return (
         db.query(User)
         .join(Survey, Survey.user_id == User.id)
+        .options(joinedload(User.survey))
         .filter(
             User.status == UserStatus.active,
             User.matching_paused.is_(False),
