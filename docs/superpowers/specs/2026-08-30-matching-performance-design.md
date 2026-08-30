@@ -88,7 +88,12 @@ pairs = guaranteed + optimal_pairs(remaining, male_ids)
 - 남녀 인원이 달라도 남는 쪽은 자기 미매칭 슬롯으로 흘러간다
 - 결과에서 `행 < n` **그리고** `열 < m`인 칸만 실제 짝으로 취한다.
   그 칸이 `-BIG`이 아님을 단언한다 — 금지 페어가 새어 나오면 즉시 터뜨린다
-- `-BIG`은 `-1e18`. 실제 가중치 최댓값(2⁵³ 미만)보다 충분히 작아 절대 선택되지 않는다
+- 금지 페어가 안 뽑히는 근거는 크기가 아니라 구조다 — 패딩에 항상 0점짜리 전원 미매칭 조합이
+  있고, 금지 칸을 쓰는 어떤 매칭도 그 두 사람의 미매칭 슬롯으로 갈아 끼우면 순증가한다
+- `-1e18`부터 `-1.0`·`-1e-12`·`-0.0`까지 낮춰 봐도(N≤2,000, 밀도 20~80%) 새어 나오지 않고
+  결과도 바이트 단위로 동일 — 실측
+- 크기 논리는 실제로 깨진다: N=4,000이면 양의 매칭 합이 1.6e19로 `-BIG`(`-1e18`) 절댓값을 넘는다.
+  그런데도 선택 안 되는 이유가 위 구조 논거다
 
 메모리는 `풀²  × 8B` — 1,000명 8MB / 2,000명 32MB / 4,000명 128MB.
 
@@ -188,7 +193,8 @@ if max_base * big > 2**53:
 |---|---|
 | `services/pairing.py` | networkx → scipy. 랭크 압축 + 패딩 행렬 + 정밀도 가드 |
 | `services/matching.py` | `optimal_pairs` 호출 1줄, `eligible_users`에 `joinedload(User.survey)` 1줄 |
-| `pyproject.toml` | `networkx` 제거, `scipy` 추가 |
+| `pyproject.toml` | `networkx` 제거, `scipy` 추가. `requires-python` 3.11 → 3.12 (scipy 1.18 / numpy 2.5가 3.11 wheel 미제공) |
+| `.python-version` | 신규. 배포 런타임 고정 — 기존에 런타임 핀이 없었다 |
 | `tests/test_pairing.py` | 기존 유지 + 신규 6개 |
 | 매칭 알고리즘 스펙 | §5.1·§5.2·§12 반영 |
 
