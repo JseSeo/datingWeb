@@ -39,7 +39,11 @@ def test_prefers_matching_more_people():
 
 
 def test_ties_prefer_smaller_ids():
-    """동점이면 작은 id 우선 (설계 §5.2)."""
+    """동점이면 순번이 가까운 쪽으로 편향된다 (설계 §5.2).
+
+    여기선 id가 1..4로 조밀해 순번과 id 순서가 같아, 결과가 작은 id끼리
+    묶인 것처럼 보인다.
+    """
     scores = {(1, 3): 50.0, (1, 4): 50.0, (2, 3): 50.0, (2, 4): 50.0}
     assert optimal_pairs(scores, male_ids={1, 2}) == [(1, 3), (2, 4)]
 
