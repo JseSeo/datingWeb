@@ -13,8 +13,9 @@ from app.schemas.round import AdminMatchRoundOut, MatchRoundIn, MatchRoundOut
 router = APIRouter(prefix="/match-rounds", tags=["rounds"])
 admin_router = APIRouter(prefix="/admin/match-rounds", tags=["rounds"])
 
-# 되돌리기 유예. 실측 최장 실행이 185초라 3배 이상 여유를 둔다
-RUNNING_GRACE = timedelta(minutes=10)
+# 되돌리기 유예. 엔진이 지원하는 최대 풀(정밀도 한계 약 4,100명)에서 측정한
+# run_matching 전 구간 최장 실행이 131초라 2배 이상 여유를 둔다
+RUNNING_GRACE = timedelta(minutes=5)
 
 
 @router.get("/next", response_model=MatchRoundOut | None)
@@ -164,8 +165,8 @@ def reset_round(
     """서버가 죽어 running에 멈춘 라운드를 pending으로 되돌린다.
 
     살아서 도는 라운드를 되돌리면 이중 실행이 난다. 프록시 타임아웃(30~60초)이
-    실행(최장 185초)보다 짧아 관리자 화면엔 실패로 보이면서 서버는 계속 도는
-    경우가 있으므로, 선점 후 RUNNING_GRACE가 지나기 전에는 거부한다.
+    실행(4,000명 실측 131초)보다 짧아 관리자 화면엔 실패로 보이면서 서버는 계속
+    도는 경우가 있으므로, 선점 후 RUNNING_GRACE가 지나기 전에는 거부한다.
     """
     round_ = db.get(MatchRound, round_id)
     if round_ is None:

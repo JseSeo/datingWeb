@@ -427,7 +427,7 @@ def test_reset_rejects_just_before_the_grace_period_ends(admin_client: TestClien
     [round_id] = _add_rounds(MatchRound(
         scheduled_at=_hours(-1),
         status=RoundStatus.running,
-        started_at=datetime.utcnow() - timedelta(minutes=9, seconds=59),
+        started_at=datetime.utcnow() - timedelta(minutes=4, seconds=59),
     ))
     res = admin_client.post(f"/admin/match-rounds/{round_id}/reset")
     assert res.status_code == 409
@@ -438,7 +438,7 @@ def test_reset_allows_just_after_the_grace_period_ends(admin_client: TestClient)
     [round_id] = _add_rounds(MatchRound(
         scheduled_at=_hours(-1),
         status=RoundStatus.running,
-        started_at=datetime.utcnow() - timedelta(minutes=10, seconds=1),
+        started_at=datetime.utcnow() - timedelta(minutes=5, seconds=1),
     ))
     res = admin_client.post(f"/admin/match-rounds/{round_id}/reset")
     assert res.status_code == 200
