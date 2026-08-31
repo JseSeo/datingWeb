@@ -40,6 +40,8 @@ class QuestionOut(BaseModel):
     rank_items: list[ChoiceOut] | None = None
     scale_labels: tuple[str, str] | None = None
     unit: str | None = None
+    min: int | None = None
+    max: int | None = None
     male_only: bool = False
     no_pref_id: str | None = None
 

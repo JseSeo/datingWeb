@@ -96,3 +96,69 @@ def test_reject_absolute_unknown_id(client: TestClient):
         "answers": {"responses": {"a": 1}, "absolute": ["ghost"]}
     }, headers=headers)
     assert res.status_code == 400
+
+
+def test_unknown_question_id_is_dropped_not_rejected(client: TestClient):
+    """모르는 문항 id는 400이 아니라 조용히 버린다.
+
+    유일한 클라이언트가 우리 프론트라, 카탈로그가 바뀌는 사이 오래된 탭에서
+    저장하는 유저를 400으로 막아버리는 쪽이 더 나쁘다.
+    """
+    headers = _register_and_get_headers(client, "d1@test.com")
+    res = client.put("/me/survey", json={
+        "answers": {"responses": {"height_self": 175, "ghost_self": "x"},
+                    "absolute": []}
+    }, headers=headers)
+    assert res.status_code == 200
+    assert res.json()["answers"]["responses"] == {"height_self": 175}
+
+
+def test_invalid_value_is_dropped(client: TestClient):
+    headers = _register_and_get_headers(client, "d2@test.com")
+    res = client.put("/me/survey", json={
+        "answers": {"responses": {"height_pref": "banana"}, "absolute": []}
+    }, headers=headers)
+    assert res.status_code == 200
+    assert res.json()["answers"]["responses"] == {}
+
+
+def test_absolute_is_dropped_when_its_question_value_was_dropped(client: TestClient):
+    """값이 버려지면 그 문항을 가리키던 절대질문도 같이 버려야 한다.
+
+    구조 검증(`absolute ⊆ responses`)은 값을 버리기 *전*에 돌기 때문에
+    이 고아를 잡지 못한다.
+    """
+    headers = _register_and_get_headers(client, "d3@test.com")
+    res = client.put("/me/survey", json={
+        "answers": {"responses": {"height_pref": "banana"},
+                    "absolute": ["height_pref"]}
+    }, headers=headers)
+    assert res.status_code == 200
+    assert res.json()["answers"]["absolute"] == []
+
+
+def test_absolute_drops_non_pref_question(client: TestClient):
+    """절대질문은 '원하는 상대' 문항만 의미가 있다.
+
+    `absolute_ok`가 `_pref`로 끝나지 않는 id를 어차피 무시하므로,
+    남겨두면 유저에게 "이 조건이 걸렸다"고 거짓말하는 셈이 된다.
+    """
+    headers = _register_and_get_headers(client, "d4@test.com")
+    res = client.put("/me/survey", json={
+        "answers": {"responses": {"height_self": 175}, "absolute": ["height_self"]}
+    }, headers=headers)
+    assert res.status_code == 200
+    assert res.json()["answers"]["absolute"] == []
+
+
+def test_unhashable_value_never_reaches_storage(client: TestClient):
+    """회귀: 이 값이 저장되면 scoring의 `_table`이 unhashable TypeError로 터진다."""
+    headers = _register_and_get_headers(client, "d5@test.com")
+    res = client.put("/me/survey", json={
+        "answers": {"responses": {"height_pref": {"a": 1},
+                                  "style_self": [{"a": 1}],
+                                  "priority_rank_self": [1, "a", None, {}]},
+                    "absolute": []}
+    }, headers=headers)
+    assert res.status_code == 200
+    assert res.json()["answers"]["responses"] == {}
