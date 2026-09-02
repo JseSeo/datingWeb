@@ -27,6 +27,15 @@ vi.mock("react-router-dom", async () => {
 const SURVEY_DONE = { answers: { responses: {}, absolute: [] }, updated_at: "2026-08-01T00:00:00" };
 const SURVEY_EMPTY = { answers: {}, updated_at: null };
 
+const MATCH = {
+  name: "이상대",
+  university: "연세대학교",
+  instagram: "partner_insta",
+  kakao_id: null,
+  phone: null,
+  executed_at: "2026-08-14T12:00:00",
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
   currentUser = { ...user };
@@ -34,6 +43,7 @@ beforeEach(() => {
   // shouldAdvanceTime이 없으면 findBy*의 대기 타이머가 멈춰 타임아웃 난다.
   vi.useFakeTimers({ shouldAdvanceTime: true });
   vi.setSystemTime(new Date("2026-08-11T12:00:00Z"));
+  vi.spyOn(api, "getMyMatch").mockResolvedValue(null);
 });
 
 afterEach(() => vi.useRealTimers());
@@ -113,5 +123,52 @@ describe("Home", () => {
     );
     expect(screen.queryByRole("button", { name: /설문 하러가기/ })).toBeNull();
     expect(screen.queryByText(/매칭 참여 중/)).toBeNull();
+  });
+
+  it("매칭 결과가 있으면 상대 이름·학교·연락처 표시", async () => {
+    vi.spyOn(api, "getNextRound").mockResolvedValue({ id: 1, scheduled_at: "2026-08-14T12:00:00" });
+    vi.spyOn(api, "getSurvey").mockResolvedValue(SURVEY_DONE);
+    vi.spyOn(api, "getMyMatch").mockResolvedValue(MATCH);
+    renderHome();
+    expect(await screen.findByText("이상대")).toBeInTheDocument();
+    expect(screen.getByText("연세대학교")).toBeInTheDocument();
+    expect(screen.getByText("인스타그램 @partner_insta")).toBeInTheDocument();
+  });
+
+  it("매칭 결과가 있으면 D-day 카드 대신 결과를 보여준다", async () => {
+    vi.spyOn(api, "getNextRound").mockResolvedValue({ id: 1, scheduled_at: "2026-08-14T12:00:00" });
+    vi.spyOn(api, "getSurvey").mockResolvedValue(SURVEY_DONE);
+    vi.spyOn(api, "getMyMatch").mockResolvedValue(MATCH);
+    renderHome();
+    await screen.findByText("이상대");
+    expect(screen.queryByText("D-3")).not.toBeInTheDocument();
+    expect(screen.getByText("이번 주 매칭 결과")).toBeInTheDocument();
+  });
+
+  it("빈 연락처는 줄을 만들지 않는다", async () => {
+    vi.spyOn(api, "getNextRound").mockResolvedValue(null);
+    vi.spyOn(api, "getSurvey").mockResolvedValue(SURVEY_DONE);
+    vi.spyOn(api, "getMyMatch").mockResolvedValue(MATCH);
+    renderHome();
+    await screen.findByText("이상대");
+    expect(screen.queryByText(/카카오톡/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/전화번호/)).not.toBeInTheDocument();
+  });
+
+  it("매칭 결과가 없으면 기존 D-day 화면 그대로", async () => {
+    vi.spyOn(api, "getNextRound").mockResolvedValue({ id: 1, scheduled_at: "2026-08-14T12:00:00" });
+    vi.spyOn(api, "getSurvey").mockResolvedValue(SURVEY_DONE);
+    vi.spyOn(api, "getMyMatch").mockResolvedValue(null);
+    renderHome();
+    expect(await screen.findByText("D-3")).toBeInTheDocument();
+    expect(screen.getByText("다음 매칭")).toBeInTheDocument();
+  });
+
+  it("매칭 조회가 실패해도 D-day는 뜬다", async () => {
+    vi.spyOn(api, "getNextRound").mockResolvedValue({ id: 1, scheduled_at: "2026-08-14T12:00:00" });
+    vi.spyOn(api, "getSurvey").mockResolvedValue(SURVEY_DONE);
+    vi.spyOn(api, "getMyMatch").mockRejectedValue(new Error("boom"));
+    renderHome();
+    expect(await screen.findByText("D-3")).toBeInTheDocument();
   });
 });

@@ -27,6 +27,24 @@
   margin-top: 8px;
 }
 
+.partner {
+  font-size: 28px;
+  font-weight: bold;
+  color: var(--color-primary);
+  line-height: 1.2;
+}
+
+.contacts {
+  list-style: none;
+  margin-top: 14px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--color-text);
+}
+
 .empty { font-size: 16px; font-weight: bold; }
 .muted { font-size: 13px; color: #666; margin-top: 6px; }
 .error { font-size: 14px; color: var(--color-error); }

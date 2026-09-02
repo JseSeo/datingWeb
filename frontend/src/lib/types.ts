@@ -136,6 +136,15 @@ export interface MatchingRunOut {
   guaranteed: number;
 }
 
+export interface MatchResultOut {
+  name: string;
+  university: string;
+  instagram: string | null;
+  kakao_id: string | null;
+  phone: string | null;
+  executed_at: string;
+}
+
 export type Section = "self" | "partner";
 
 export type QuestionType =
