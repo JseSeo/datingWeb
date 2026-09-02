@@ -559,3 +559,41 @@ def test_run_records_started_at_when_claiming_the_round():
     assert round_.status == RoundStatus.pending
     assert round_.started_at is not None
     db.close()
+
+
+def test_failed_run_does_not_revert_a_round_that_was_reset_and_rerun():
+    """뒤늦게 실패한 stale 실행이 남의 결과를 덮으면 안 된다.
+
+    reset(#21)이 생기면서 도달 가능해진 순서다 — A가 선점해 도는 동안 관리자가
+    되돌리고 B가 매칭을 끝내면, 뒤늦게 유니크 제약으로 실패한 A의 롤백 처리가
+    B의 done을 pending으로 되돌려 "매칭 결과는 있는데 status는 pending"인 깨진
+    상태를 남긴다. 스펙 §5.5가 유예로 피하려는 바로 그 상태다.
+    """
+    db = TestingSessionLocal()
+    man = make_user(db, "m@test.com", Gender.male, responses=NIGHT)
+    woman = make_user(db, "w@test.com", Gender.female, responses=NIGHT)
+    round_ = make_round(db)
+
+    def rerun_then_fail(*args, **kwargs):
+        # A가 도는 사이 관리자가 되돌리고(reset) B가 매칭을 끝낸 상태를 만든다
+        other = TestingSessionLocal()
+        target = other.get(MatchRound, round_.id)
+        target.status = RoundStatus.done
+        target.executed_at = datetime.utcnow()
+        target.started_at = datetime.utcnow()  # B가 새로 선점한 시각
+        other.add(Match(
+            user_a_id=man.id, user_b_id=woman.id,
+            match_round_id=round_.id, score=50,
+        ))
+        other.commit()
+        other.close()
+        raise RuntimeError("boom")  # A는 유니크 제약에 걸려 실패한다
+
+    with patch("app.services.matching.optimal_pairs", side_effect=rerun_then_fail):
+        with pytest.raises(RuntimeError):
+            matching.run_matching(db, round_.id)
+
+    db.expire_all()
+    assert db.get(MatchRound, round_.id).status == RoundStatus.done
+    assert db.query(Match).filter(Match.match_round_id == round_.id).count() == 1
+    db.close()

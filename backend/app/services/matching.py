@@ -167,13 +167,14 @@ def run_matching(db: Session, round_id: int) -> MatchingResult:
         raise RoundNotFound
 
     # 조건부 UPDATE 한 번으로 검사와 선점을 동시에 한다 — 경쟁 구간이 없다
+    claimed_at = datetime.utcnow()
     claimed = (
         db.query(MatchRound)
         .filter(MatchRound.id == round_id, MatchRound.status == RoundStatus.pending)
         .update(
             {
                 MatchRound.status: RoundStatus.running,
-                MatchRound.started_at: datetime.utcnow(),
+                MatchRound.started_at: claimed_at,
             },
             synchronize_session=False,
         )
@@ -190,7 +191,16 @@ def run_matching(db: Session, round_id: int) -> MatchingResult:
     except Exception:
         db.rollback()
         # 중간 실패는 전부 롤백된다. 절반만 매칭된 상태는 남지 않는다 (설계 §2)
-        round_.status = RoundStatus.pending
+        #
+        # 선점 시각까지 걸어 "내가 잡은 그 실행"일 때만 되돌린다. reset(설계 §5.5)으로
+        # 라운드가 pending이 되고 다른 실행이 끝난 뒤 이쪽이 뒤늦게 실패하면, 무조건
+        # 대입은 남의 done을 pending으로 덮어 "매칭 결과는 있는데 status는 pending"인
+        # 깨진 상태를 만든다
+        db.query(MatchRound).filter(
+            MatchRound.id == round_id,
+            MatchRound.status == RoundStatus.running,
+            MatchRound.started_at == claimed_at,
+        ).update({MatchRound.status: RoundStatus.pending}, synchronize_session=False)
         db.commit()
         raise
 
