@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 CARRYOVER_PER_ROUND = 15
 CARRYOVER_CAP = 45
 
-# 설계 §4.2는 3단계 작업이다. 지금은 자리만 마련해 둔다
+# 설계 §4.2는 4단계 작업이다. 지금은 자리만 마련해 둔다
 UNIVERSITY_BONUS = 0
 
 
