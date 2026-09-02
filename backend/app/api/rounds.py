@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
@@ -12,6 +12,10 @@ from app.schemas.round import AdminMatchRoundOut, MatchRoundIn, MatchRoundOut
 
 router = APIRouter(prefix="/match-rounds", tags=["rounds"])
 admin_router = APIRouter(prefix="/admin/match-rounds", tags=["rounds"])
+
+# 되돌리기 유예. 엔진이 지원하는 최대 풀(정밀도 한계 약 4,100명)에서 측정한
+# run_matching 전 구간 최장 실행이 131초라 2배 이상 여유를 둔다
+RUNNING_GRACE = timedelta(minutes=5)
 
 
 @router.get("/next", response_model=MatchRoundOut | None)
@@ -150,3 +154,43 @@ def delete_round(
     round_ = _get_editable_round(db, round_id, "삭제")
     db.delete(round_)
     db.commit()
+
+
+@admin_router.post("/{round_id}/reset", response_model=AdminMatchRoundOut)
+def reset_round(
+    round_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """서버가 죽어 running에 멈춘 라운드를 pending으로 되돌린다.
+
+    살아서 도는 라운드를 되돌리면 이중 실행이 난다. 프록시 타임아웃(30~60초)이
+    실행(4,000명 실측 131초)보다 짧아 관리자 화면엔 실패로 보이면서 서버는 계속
+    도는 경우가 있으므로, 선점 후 RUNNING_GRACE가 지나기 전에는 거부한다.
+    """
+    round_ = db.get(MatchRound, round_id)
+    if round_ is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="존재하지 않는 라운드입니다",
+        )
+    if round_.status != RoundStatus.running:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="실행 중인 라운드만 되돌릴 수 있습니다",
+        )
+    # started_at이 없으면 추적 이전에 멈춘 행이다 — 확실히 오래됐으므로 유예를 적용하지 않는다
+    if round_.started_at is not None:
+        elapsed = datetime.utcnow() - round_.started_at
+        if elapsed < RUNNING_GRACE:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"실행을 시작한 지 {int(elapsed.total_seconds() // 60)}분밖에 "
+                    "지나지 않았습니다. 아직 실행 중일 수 있어요"
+                ),
+            )
+    round_.status = RoundStatus.pending
+    db.commit()
+    db.refresh(round_)
+    return round_

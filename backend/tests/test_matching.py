@@ -537,3 +537,25 @@ def test_eligible_users_loads_surveys_in_one_query():
     selects = [s for s in statements if s.strip().upper().startswith("SELECT")]
     assert len(selects) == 1, f"쿼리 {len(selects)}번: {selects}"
     db.close()
+
+
+def test_run_records_started_at_when_claiming_the_round():
+    """되돌리기 유예 판정의 기준값.
+
+    선점 UPDATE는 _execute와 별도로 커밋되므로, 실행이 실패해 롤백된 뒤에도
+    started_at은 남는다. 서버가 죽어 running에 멈춘 라운드도 마찬가지다.
+    """
+    db = TestingSessionLocal()
+    make_user(db, "m@test.com", Gender.male, responses=NIGHT)
+    make_user(db, "w@test.com", Gender.female, responses=NIGHT)
+    round_ = make_round(db)
+    assert round_.started_at is None
+
+    with patch("app.services.matching.optimal_pairs", side_effect=RuntimeError("boom")):
+        with pytest.raises(RuntimeError):
+            matching.run_matching(db, round_.id)
+
+    db.refresh(round_)
+    assert round_.status == RoundStatus.pending
+    assert round_.started_at is not None
+    db.close()

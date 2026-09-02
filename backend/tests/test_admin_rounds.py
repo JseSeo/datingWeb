@@ -336,3 +336,110 @@ def test_update_returns_409_when_precheck_is_bypassed(
     )
     assert res.status_code == 409
     assert res.json()["detail"] == "같은 시각의 라운드가 이미 있습니다"
+
+
+def _minutes_ago(n: int) -> datetime:
+    return datetime.utcnow() - timedelta(minutes=n)
+
+
+def test_reset_returns_stuck_running_round_to_pending(admin_client: TestClient):
+    """서버가 죽어 running에 멈춘 라운드의 유일한 복구 수단."""
+    [round_id] = _add_rounds(MatchRound(
+        scheduled_at=_hours(-1),
+        status=RoundStatus.running,
+        started_at=_minutes_ago(20),
+    ))
+    res = admin_client.post(f"/admin/match-rounds/{round_id}/reset")
+    assert res.status_code == 200
+    assert res.json()["status"] == "pending"
+
+    listed = admin_client.get("/admin/match-rounds").json()
+    assert listed[0]["status"] == "pending"
+
+
+def test_reset_rejects_recently_started_round(admin_client: TestClient):
+    """아직 실행 중일 수 있다. 되돌리면 이중 실행이 난다."""
+    [round_id] = _add_rounds(MatchRound(
+        scheduled_at=_hours(-1),
+        status=RoundStatus.running,
+        started_at=_minutes_ago(1),
+    ))
+    res = admin_client.post(f"/admin/match-rounds/{round_id}/reset")
+    assert res.status_code == 409
+    assert "1분" in res.json()["detail"]
+
+
+def test_reset_allows_running_round_without_started_at(admin_client: TestClient):
+    """started_at 추적 이전에 멈춘 행. 확실히 오래된 것이므로 유예를 적용하지 않는다."""
+    [round_id] = _add_rounds(MatchRound(
+        scheduled_at=_hours(-1),
+        status=RoundStatus.running,
+        started_at=None,
+    ))
+    res = admin_client.post(f"/admin/match-rounds/{round_id}/reset")
+    assert res.status_code == 200
+    assert res.json()["status"] == "pending"
+
+
+def test_reset_rejects_pending_round(admin_client: TestClient):
+    [round_id] = _add_rounds(
+        MatchRound(scheduled_at=_hours(24), status=RoundStatus.pending)
+    )
+    res = admin_client.post(f"/admin/match-rounds/{round_id}/reset")
+    assert res.status_code == 409
+    assert res.json()["detail"] == "실행 중인 라운드만 되돌릴 수 있습니다"
+
+
+def test_reset_rejects_done_round(admin_client: TestClient):
+    """done은 매칭 결과가 딸린 상태다. 되돌리면 결과 있는 라운드를 재실행하게 된다."""
+    [round_id] = _add_rounds(
+        MatchRound(scheduled_at=_hours(-24), status=RoundStatus.done)
+    )
+    res = admin_client.post(f"/admin/match-rounds/{round_id}/reset")
+    assert res.status_code == 409
+    assert res.json()["detail"] == "실행 중인 라운드만 되돌릴 수 있습니다"
+
+
+def test_reset_missing_round_returns_404(admin_client: TestClient):
+    res = admin_client.post("/admin/match-rounds/9999/reset")
+    assert res.status_code == 404
+    assert res.json()["detail"] == "존재하지 않는 라운드입니다"
+
+
+def test_reset_rejects_non_admin(client: TestClient):
+    headers = _register_normal_user(client)
+    [round_id] = _add_rounds(
+        MatchRound(scheduled_at=_hours(-1), status=RoundStatus.running)
+    )
+    res = client.post(f"/admin/match-rounds/{round_id}/reset", headers=headers)
+    assert res.status_code == 403
+
+
+def test_reset_requires_auth(client: TestClient):
+    [round_id] = _add_rounds(
+        MatchRound(scheduled_at=_hours(-1), status=RoundStatus.running)
+    )
+    assert client.post(f"/admin/match-rounds/{round_id}/reset").status_code == 401
+
+
+def test_reset_rejects_just_before_the_grace_period_ends(admin_client: TestClient):
+    """유예 임계값을 잠근다 — RUNNING_GRACE를 줄이면 이 테스트가 깨진다."""
+    [round_id] = _add_rounds(MatchRound(
+        scheduled_at=_hours(-1),
+        status=RoundStatus.running,
+        started_at=datetime.utcnow() - timedelta(minutes=4, seconds=59),
+    ))
+    res = admin_client.post(f"/admin/match-rounds/{round_id}/reset")
+    assert res.status_code == 409
+
+
+def test_reset_allows_just_after_the_grace_period_ends(admin_client: TestClient):
+    """반대쪽 경계 — RUNNING_GRACE를 늘리면 이 테스트가 깨진다."""
+    [round_id] = _add_rounds(MatchRound(
+        scheduled_at=_hours(-1),
+        status=RoundStatus.running,
+        started_at=datetime.utcnow() - timedelta(minutes=5, seconds=1),
+    ))
+    res = admin_client.post(f"/admin/match-rounds/{round_id}/reset")
+    assert res.status_code == 200
+    assert res.json()["status"] == "pending"

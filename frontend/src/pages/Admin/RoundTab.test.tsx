@@ -264,3 +264,64 @@ describe("매칭 실행", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("라운드 되돌리기", () => {
+  const running: AdminMatchRoundOut = {
+    id: 1,
+    scheduled_at: "2026-09-01T10:00:00",
+    status: "running",
+  };
+
+  it("running 라운드에만 되돌리기 버튼이 있다", async () => {
+    vi.spyOn(api, "listMatchRounds").mockResolvedValue([running, pending, done]);
+    render(<RoundTab />);
+    await waitFor(() => screen.getByText("실행중"));
+    expect(screen.getAllByRole("button", { name: "되돌리기" })).toHaveLength(1);
+    // running 행에는 실행·수정·삭제가 없다
+    expect(screen.queryAllByRole("button", { name: "매칭 실행" })).toHaveLength(1);
+  });
+
+  it("confirm 승인 시 되돌리고 배지가 예정으로 바뀐다", async () => {
+    vi.spyOn(api, "listMatchRounds").mockResolvedValue([running]);
+    const spy = vi.spyOn(api, "resetMatchRound").mockResolvedValue({
+      ...running,
+      status: "pending",
+    });
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    render(<RoundTab />);
+    fireEvent.click(await screen.findByRole("button", { name: "되돌리기" }));
+
+    await waitFor(() => expect(screen.getByText("예정")).toBeInTheDocument());
+    expect(screen.queryByText("실행중")).toBeNull();
+    expect(spy).toHaveBeenCalledWith(1);
+  });
+
+  it("confirm 취소 시 요청을 보내지 않는다", async () => {
+    vi.spyOn(api, "listMatchRounds").mockResolvedValue([running]);
+    const spy = vi.spyOn(api, "resetMatchRound");
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+
+    render(<RoundTab />);
+    fireEvent.click(await screen.findByRole("button", { name: "되돌리기" }));
+
+    expect(spy).not.toHaveBeenCalled();
+    expect(screen.getByText("실행중")).toBeInTheDocument();
+  });
+
+  it("유예 거부 문구를 서버 그대로 보여준다", async () => {
+    vi.spyOn(api, "listMatchRounds").mockResolvedValue([running]);
+    vi.spyOn(api, "resetMatchRound").mockRejectedValue(
+      new ApiError(409, "실행을 시작한 지 3분밖에 지나지 않았습니다. 아직 실행 중일 수 있어요"),
+    );
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    render(<RoundTab />);
+    fireEvent.click(await screen.findByRole("button", { name: "되돌리기" }));
+
+    expect(
+      await screen.findByText(/3분밖에 지나지 않았습니다/),
+    ).toBeInTheDocument();
+    expect(screen.getByText("실행중")).toBeInTheDocument();
+  });
+});

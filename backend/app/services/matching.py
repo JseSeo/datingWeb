@@ -170,7 +170,13 @@ def run_matching(db: Session, round_id: int) -> MatchingResult:
     claimed = (
         db.query(MatchRound)
         .filter(MatchRound.id == round_id, MatchRound.status == RoundStatus.pending)
-        .update({MatchRound.status: RoundStatus.running}, synchronize_session=False)
+        .update(
+            {
+                MatchRound.status: RoundStatus.running,
+                MatchRound.started_at: datetime.utcnow(),
+            },
+            synchronize_session=False,
+        )
     )
     db.commit()
     if claimed == 0:
