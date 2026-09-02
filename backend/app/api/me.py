@@ -3,15 +3,18 @@ import os
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.core.deps import get_current_user
 from app.core.security import hash_password
 from app.database import get_db
+from app.models.match import Match, MatchRound, RoundStatus
 from app.models.survey import Survey
 from app.models.user import User, UserStatus
 from app.models.verification import StudentVerification
+from app.schemas.matching import MatchResultOut
 from app.schemas.survey import SurveyOut, SurveySubmit
 from app.schemas.user import MatchingPauseUpdate, ProfileUpdate, UserOut
 from app.schemas.verification import VerificationOut
@@ -221,3 +224,51 @@ def save_survey(
     db.commit()
     db.refresh(survey)
     return survey
+
+
+@router.get("/match", response_model=MatchResultOut | None)
+def get_my_match(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """가장 최근에 실행된 라운드의 내 결과. 미매칭이거나 실행된 라운드가 없으면 null.
+
+    이력은 주지 않는다 — 화면이 보여주는 건 "이번 주 결과"뿐이다 (설계 §7.1).
+    executed_at이 빈 done 행은 정렬 기준이 없어 제외한다. 정상 실행에서는
+    생기지 않지만, 섞이면 최신 라운드 판정이 DB의 NULL 정렬 규칙에 좌우된다.
+    """
+    latest = (
+        db.query(MatchRound)
+        .filter(
+            MatchRound.status == RoundStatus.done,
+            MatchRound.executed_at.isnot(None),
+        )
+        .order_by(MatchRound.executed_at.desc())
+        .first()
+    )
+    if latest is None:
+        return None
+
+    match = (
+        db.query(Match)
+        .filter(
+            Match.match_round_id == latest.id,
+            or_(Match.user_a_id == current_user.id, Match.user_b_id == current_user.id),
+        )
+        .first()
+    )
+    if match is None:
+        return None
+
+    partner_id = (
+        match.user_b_id if match.user_a_id == current_user.id else match.user_a_id
+    )
+    partner = db.get(User, partner_id)
+    return MatchResultOut(
+        name=partner.name,
+        university=partner.university,
+        instagram=partner.instagram,
+        kakao_id=partner.kakao_id,
+        phone=partner.phone,
+        executed_at=latest.executed_at,
+    )
