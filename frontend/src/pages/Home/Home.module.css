@@ -28,10 +28,8 @@
 }
 
 .partner {
+  composes: dday;
   font-size: 28px;
-  font-weight: bold;
-  color: var(--color-primary);
-  line-height: 1.2;
 }
 
 .contacts {

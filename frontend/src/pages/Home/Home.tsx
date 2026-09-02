@@ -31,20 +31,21 @@ export default function Home() {
 
   return (
     <div className={styles.wrap}>
-      <h1 className={styles.title}>{match ? "이번 주 매칭 결과" : "다음 매칭"}</h1>
+      <h1 className={styles.title}>{!loading && match ? "이번 주 매칭 결과" : "다음 매칭"}</h1>
 
       {!loading && match ? (
         <section className={styles.card}>
           <p className={styles.partner}>{match.name}</p>
           <p className={styles.when}>{match.university}</p>
           <ul className={styles.contacts}>
-            {match.instagram && <li>인스타그램 @{match.instagram}</li>}
+            {match.instagram && <li>인스타그램 @{match.instagram.replace(/^@/, "")}</li>}
             {match.kakao_id && <li>카카오톡 {match.kakao_id}</li>}
             {match.phone && <li>전화번호 {match.phone}</li>}
           </ul>
           {!match.instagram && !match.kakao_id && !match.phone && (
             <p className={styles.muted}>상대가 등록한 연락처가 없어요</p>
           )}
+          <p className={styles.muted}>{formatKST(match.executed_at)} 매칭</p>
         </section>
       ) : (
         <section className={styles.card}>

@@ -133,6 +133,17 @@ describe("Home", () => {
     expect(await screen.findByText("이상대")).toBeInTheDocument();
     expect(screen.getByText("연세대학교")).toBeInTheDocument();
     expect(screen.getByText("인스타그램 @partner_insta")).toBeInTheDocument();
+    expect(screen.getByText("2026-08-14 21:00 매칭")).toBeInTheDocument();
+  });
+
+  it("연락처가 하나도 없으면 안내 문구를 보여준다", async () => {
+    vi.spyOn(api, "getNextRound").mockResolvedValue(null);
+    vi.spyOn(api, "getSurvey").mockResolvedValue(SURVEY_DONE);
+    vi.spyOn(api, "getMyMatch").mockResolvedValue({
+      ...MATCH, instagram: null, kakao_id: null, phone: null,
+    });
+    renderHome();
+    expect(await screen.findByText("상대가 등록한 연락처가 없어요")).toBeInTheDocument();
   });
 
   it("매칭 결과가 있으면 D-day 카드 대신 결과를 보여준다", async () => {

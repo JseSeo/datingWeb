@@ -26,5 +26,3 @@ class MatchResultOut(BaseModel):
     kakao_id: str | None
     phone: str | None
     executed_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
