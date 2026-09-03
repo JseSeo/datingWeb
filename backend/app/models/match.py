@@ -1,6 +1,6 @@
 import enum
 from datetime import datetime
-from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
@@ -52,3 +52,30 @@ class Match(Base):
     )
 
     round: Mapped["MatchRound"] = relationship("MatchRound", back_populates="matches")
+
+
+class MatchingUniversityWeight(Base):
+    """대학·대학쌍 가중치 규칙 (설계 §4.2).
+
+    단일 대학 규칙은 university_b=''로 저장한다. nullable로 두면 SQLite·PostgreSQL 모두
+    유니크 인덱스에서 NULL을 서로 다른 값으로 봐서 같은 대학에 규칙이 여러 번 들어가고,
+    그 값들이 합산돼 매칭 전체가 한쪽으로 쏠린다.
+
+    대학명은 자유 텍스트다 — User.university와 같은 취급이다 (대학 목록은 팀 미결).
+    """
+
+    __tablename__ = "matching_university_weights"
+    __table_args__ = (
+        UniqueConstraint(
+            "university_a", "university_b", name="uq_university_weights_pair"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    university_a: Mapped[str] = mapped_column(String(100), nullable=False)
+    university_b: Mapped[str] = mapped_column(String(100), default="", nullable=False)
+    # 음수 허용 = 페널티
+    bonus: Mapped[int] = mapped_column(Integer, nullable=False)
+    # 이벤트가 끝나면 삭제 대신 끈다 (설계 §4.2)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    note: Mapped[str | None] = mapped_column(String(200), nullable=True)
