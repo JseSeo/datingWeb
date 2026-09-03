@@ -69,6 +69,19 @@ describe("UniversityWeightTab", () => {
     expect(create).not.toHaveBeenCalled();
   });
 
+  it("보너스가 비면 0으로 보내지 않고 에러를 띄운다", async () => {
+    vi.spyOn(api, "listUniversityWeights").mockResolvedValue([]);
+    const create = vi.spyOn(api, "createUniversityWeight");
+    render(<UniversityWeightTab />);
+    await screen.findByText("등록된 규칙 없음");
+
+    fireEvent.change(screen.getByLabelText(/대학 A/), { target: { value: "서울대학교" } });
+    fireEvent.click(screen.getByRole("button", { name: "추가" }));
+
+    expect(await screen.findByText("대학명과 보너스를 확인하세요.")).toBeInTheDocument();
+    expect(create).not.toHaveBeenCalled();
+  });
+
   it("중지를 누르면 active를 반전해 저장한다", async () => {
     vi.spyOn(api, "listUniversityWeights").mockResolvedValue([SINGLE]);
     const update = vi.spyOn(api, "updateUniversityWeight")

@@ -117,7 +117,7 @@ export default function UniversityWeightTab() {
           <input id="weight-b" value={uniB} onChange={(e) => setUniB(e.target.value)} />
         </label>
         <label className={styles.formLabel} htmlFor="weight-bonus">
-          보너스 (음수는 페널티)
+          보너스 (음수는 페널티, 합계 ±50까지만 적용)
           <input
             id="weight-bonus"
             type="number"

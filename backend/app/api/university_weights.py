@@ -24,6 +24,11 @@ def _normalized(payload: UniversityWeightIn) -> tuple[str, str]:
         )
     if b == "":
         return a, ""
+    if a == b:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="같은 대학을 쌍으로 등록할 수 없습니다. 대학 B를 비우세요",
+        )
     return university_pair_key(a, b)
 
 

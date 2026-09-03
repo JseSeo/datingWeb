@@ -46,6 +46,12 @@ def test_blank_university_a_is_rejected(admin_client: TestClient):
     assert _create(admin_client, university_a="   ").status_code == 400
 
 
+def test_same_university_pair_is_rejected(admin_client: TestClient):
+    """(A, A)는 단일 규칙과 겹치는 문서에 없는 경로다 — 대학 B를 비워야 한다."""
+    res = _create(admin_client, university_a=SNU, university_b=SNU)
+    assert res.status_code == 400
+
+
 def test_negative_bonus_is_allowed(admin_client: TestClient):
     assert _create(admin_client, bonus=-20).json()["bonus"] == -20
 

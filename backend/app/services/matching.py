@@ -42,13 +42,17 @@ def university_weights(
     rows = (
         db.query(MatchingUniversityWeight)
         .filter(MatchingUniversityWeight.active.is_(True))
+        .order_by(MatchingUniversityWeight.id)
         .all()
     )
     for row in rows:
         if row.university_b == "":
             singles[row.university_a] = row.bonus
         else:
-            pairs[university_pair_key(row.university_a, row.university_b)] = row.bonus
+            key = university_pair_key(row.university_a, row.university_b)
+            # 순서가 뒤집힌 중복 행은 유니크가 못 막는다 — 덮어쓰면 어느 쪽이 남는지가
+            # DB 반환 순서에 좌우되므로 합산한다
+            pairs[key] = pairs.get(key, 0) + row.bonus
     return singles, pairs
 
 
@@ -258,7 +262,7 @@ def _execute(db: Session, round_: MatchRound) -> MatchingResult:
     women = [u for u in pool if u.gender == Gender.female]
     excluded = past_pairs(db)
     red, ojakgyo_counts = game_signals(db, pool)
-    singles, pairs = university_weights(db)
+    uni_singles, uni_pairs = university_weights(db)
 
     base: dict[tuple[int, int], float] = {}   # 보정 전 궁합 점수 (Match.score에 기록)
     adjusted: dict[tuple[int, int], float] = {}  # 보정까지 얹은 매칭용 점수
@@ -283,12 +287,14 @@ def _execute(db: Session, round_: MatchRound) -> MatchingResult:
             bonus = (
                 carryover_bonus(man)
                 + carryover_bonus(woman)
-                + university_bonus(man.university, woman.university, singles, pairs)
+                + university_bonus(man.university, woman.university, uni_singles, uni_pairs)
             )
             count = ojakgyo_counts.get(key, 0)
             if 0 < count < OJAKGYO_GUARANTEE_COUNT:
                 bonus += OJAKGYO_BONUS * count
-            adjusted[key] = score + bonus
+            # 0에서 바닥. 음수가 되면 pairing이 "둘 다 미매칭"을 더 낫다고 봐서
+            # 설계에 없는 최소 점수 컷이 생긴다 (pairing.py의 _MATCH_BONUS 주석 참고)
+            adjusted[key] = max(0.0, score + bonus)
 
     if skipped:
         logger.error(
