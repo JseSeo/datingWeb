@@ -7,7 +7,10 @@ import app.models  # noqa: F401 — registers all models
 from app.database import Base
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# alembic.ini의 sqlalchemy.url은 플레이스홀더. 호출자가 이미 실제 url을 넣어뒀으면
+# (테스트에서 임시 sqlite로 격리하는 경우 등) 그대로 두고, 아니면 설정값으로 채운다.
+if config.get_main_option("sqlalchemy.url") in (None, "driver://user:pass@localhost/dbname"):
+    config.set_main_option("sqlalchemy.url", settings.database_url)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
