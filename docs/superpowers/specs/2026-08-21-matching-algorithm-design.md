@@ -525,6 +525,7 @@ id 대소로 정규화하면 같은 사람이 라운드 안에서 `user_a`와 `u
 | `status = active` | 학생증 승인 완료 |
 | `matching_paused = false` | 마이페이지 일시정지 OFF |
 | Survey 행 존재 | 응답 개수는 따지지 않음 (부분 응답 허용) |
+| 연락처 1개 이상 | `instagram` · `kakao_id` · `phone` 중 최소 1개 (2026-09-04 추가) |
 
 ---
 

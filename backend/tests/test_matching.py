@@ -21,11 +21,12 @@ def make_user(
     with_survey: bool = True,
     name: str = "테스트",
     university: str = "서울대학교",
+    kakao_id: str | None = "kakao_default",
 ) -> User:
     user = User(
         email=email, password_hash="x", name=name, university=university,
         gender=gender, status=status, matching_paused=paused,
-        missed_rounds=missed_rounds,
+        missed_rounds=missed_rounds, kakao_id=kakao_id,
     )
     db.add(user)
     db.commit()
@@ -44,6 +45,36 @@ def make_round(db) -> MatchRound:
     db.commit()
     db.refresh(round_)
     return round_
+
+
+def test_user_without_contact_is_excluded():
+    """DB 직접 수정이나 과거 데이터로 연락처 0개가 생겨도 매칭되면 안 된다 (설계 §7.1)."""
+    db = TestingSessionLocal()
+    user = make_user(db, "nocontact@test.com")
+    user.kakao_id = None
+    db.commit()
+    assert user.id not in [u.id for u in matching.eligible_users(db)]
+    db.close()
+
+
+def test_empty_string_contact_counts_as_missing():
+    """과거 데이터에 빈 문자열이 남아 있을 수 있다."""
+    db = TestingSessionLocal()
+    user = make_user(db, "emptycontact@test.com")
+    user.kakao_id = ""
+    db.commit()
+    assert user.id not in [u.id for u in matching.eligible_users(db)]
+    db.close()
+
+
+def test_whitespace_only_contact_counts_as_missing():
+    """공백만 있는 연락처는 실제로 연락 불가능하다 — 없는 것과 같다."""
+    db = TestingSessionLocal()
+    user = make_user(db, "whitespacecontact@test.com")
+    user.kakao_id = "   "
+    db.commit()
+    assert user.id not in [u.id for u in matching.eligible_users(db)]
+    db.close()
 
 
 def test_eligible_pool_requires_active_unpaused_and_survey():

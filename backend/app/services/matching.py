@@ -5,6 +5,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.game import Ojakgyo, RedThread
@@ -79,8 +80,19 @@ def pair_key(a: int, b: int) -> tuple[int, int]:
     return (a, b) if a < b else (b, a)
 
 
+def _has_contact():
+    """연락처 1개 이상 (설계 §7.2). 빈 문자열·공백만 있는 값도 없는 것으로 본다 —
+    스키마는 None으로 정규화하지만 과거 데이터나 DB 직접 수정이 남길 수 있다."""
+    return or_(
+        *[
+            and_(column.isnot(None), func.trim(column) != "")
+            for column in (User.instagram, User.kakao_id, User.phone)
+        ]
+    )
+
+
 def eligible_users(db: Session) -> list[User]:
-    """매칭 자격: active + 일시정지 OFF + 설문 행 존재 (설계 §6.2).
+    """매칭 자격: active + 일시정지 OFF + 설문 행 존재 + 연락처 1개 이상 (설계 §6.2).
 
     응답 개수는 따지지 않는다 — 부분 응답도 풀에 넣는다.
     """
@@ -91,6 +103,7 @@ def eligible_users(db: Session) -> list[User]:
         .filter(
             User.status == UserStatus.active,
             User.matching_paused.is_(False),
+            _has_contact(),
         )
         .order_by(User.id)
         .all()
