@@ -280,7 +280,7 @@ return 후보[0] if len(후보) == 1 else None
 | Game / RedThreadTab | 학교 셀렉트, 학번(선택) + 안내 문구 |
 | Admin / UniversityWeightTab | 대학명 2개를 셀렉트로. 두 번째 "없음" = 단일 대학 규칙 (`university_b = ''`) |
 | Admin / **UniversityTab** (신규) | 5번째 탭. 추가 · 활성 토글 · 삭제 |
-| MyPage | 마지막 연락처 삭제 시 에러 표시 |
+| Profile | 마지막 연락처 삭제 시 에러 표시 |
 
 셀렉트가 4곳에 나오므로 공용 컴포넌트 `components/UniversitySelect` 하나로 만든다.
 

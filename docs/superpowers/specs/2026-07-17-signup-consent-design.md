@@ -90,7 +90,7 @@ terms_agreed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True
 
 ```
 [프론트] 3개 체크 (버튼 게이트)
-   → POST /auth/register { email, pw, name, university, agreed_terms, agreed_privacy, agreed_age_14 }
+   → POST /auth/register { email, pw, name, university(목록에서 선택), instagram/kakao_id/phone 중 1개 이상, admission_year(선택), agreed_terms, agreed_privacy, agreed_age_14 }
    → [백엔드] 3개 bool 검증
         ├ 하나라도 false → 400
         └ 전부 true → User 생성 + terms_agreed_at = utcnow()
