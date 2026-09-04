@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.api.universities import validate_universities
 from app.core.deps import get_current_user
 from app.database import get_db
 from app.models.game import Ojakgyo, RedThread
@@ -50,6 +51,7 @@ def create_ojakgyo(
         )
 
     pa, pb = _normalize_pair(*a, *b)
+    validate_universities(db, pa[1], pb[1])
     existing = db.query(Ojakgyo).filter(
         Ojakgyo.recommender_id == current_user.id,
         Ojakgyo.person_a_name == pa[0],
@@ -80,6 +82,7 @@ def submit_red_thread(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    validate_universities(db, *[t.target_university.strip() for t in payload.targets])
     me = (current_user.name.strip(), current_user.university.strip())
     cleaned: list[tuple[str, str]] = []
     seen: set[tuple[str, str]] = set()
