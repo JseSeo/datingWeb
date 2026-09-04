@@ -32,7 +32,8 @@ def test_register_rejects_inactive_university(client: TestClient, admin_client: 
     """끈 대학으로는 새로 가입할 수 없다 (설계 §5.3)."""
     listed = admin_client.get("/admin/universities").json()
     korea = next(u for u in listed if u["name"] == "고려대학교")
-    admin_client.patch(f"/admin/universities/{korea['id']}", json={"active": False})
+    patch_res = admin_client.patch(f"/admin/universities/{korea['id']}", json={"active": False})
+    assert patch_res.status_code == 200
     assert _register(client, "고려대학교", "inactive@test.com").status_code == 422
 
 
@@ -68,3 +69,29 @@ def test_weight_single_rule_keeps_empty_university_b(admin_client: TestClient):
         "active": True, "note": None,
     })
     assert res.status_code == 201
+
+
+def test_weight_rejects_unlisted_university_b(admin_client: TestClient):
+    """university_a뿐 아니라 university_b도 검증돼야 한다."""
+    res = admin_client.post("/admin/university-weights", json={
+        "university_a": "서울대학교", "university_b": UNLISTED, "bonus": 10,
+        "active": True, "note": None,
+    })
+    assert res.status_code == 422
+
+
+def test_weight_update_rejects_unlisted_university(admin_client: TestClient):
+    created = admin_client.post("/admin/university-weights", json={
+        "university_a": "서울대학교", "university_b": "", "bonus": 10,
+        "active": True, "note": None,
+    }).json()
+    res = admin_client.put(f"/admin/university-weights/{created['id']}", json={
+        "university_a": UNLISTED, "university_b": "", "bonus": 20,
+        "active": True, "note": None,
+    })
+    assert res.status_code == 422
+
+    listed = admin_client.get("/admin/university-weights").json()
+    unchanged = next(w for w in listed if w["id"] == created["id"])
+    assert unchanged["university_a"] == "서울대학교"
+    assert unchanged["university_b"] == ""
