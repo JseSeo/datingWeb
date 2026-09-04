@@ -225,6 +225,20 @@ def test_red_thread_received_counts_distinct_people(client: TestClient):
     assert res.json()["count"] == 1
 
 
+def test_red_thread_received_excludes_namesake_different_year(client: TestClient):
+    """이름+학교가 같아도 학번이 다른 동명이인에게 온 실은 매칭에서 걸러지듯
+    여기서도 세면 안 된다 (설계 §6.3과 일치)."""
+    hb = _auth(client, "target3@test.com", "타깃3", "성균관대학교", admission_year=2021)
+    h1 = _auth(client, "q2@test.com")
+    body = {"targets": [
+        {"target_name": "타깃3", "target_university": "성균관대학교",
+         "target_admission_year": 2022},
+    ]}
+    client.post("/game/red-thread", json=body, headers=h1)
+    res = client.get("/game/red-thread/received", headers=hb)
+    assert res.json()["count"] == 0
+
+
 def test_red_thread_received_zero(client: TestClient):
     headers = _auth(client, "nobody@test.com")
     res = client.get("/game/red-thread/received", headers=headers)
@@ -323,7 +337,13 @@ def test_ojakgyo_namesake_missing_year_forbidden(client: TestClient):
 
 
 def test_ojakgyo_self_different_year_allowed(client: TestClient):
-    """본인과 이름+학교가 같아도 학번이 다르면 다른 사람 — 지목 가능 (설계 §6)."""
+    """API 가드는 본인과 이름+학교가 같아도 학번이 다르면 "다른 사람"이라 201을
+    돌려준다 — 그게 맞다, 가드는 나중에 매칭 단계 학번 해석이 어떻게 될지 알 수
+    없다 (설계 §6). 하지만 이 케이스는 지목자가 스스로를 §6.3 폴백으로 되돌아오게
+    만들 수 있는 자리라, 실제로 오작교 집계에 반영되는지는 여기서 확인하지 않는다
+    — 그건 game_signals 레벨의
+    test_matching.test_ojakgyo_self_nomination_via_year_mismatch_is_not_counted가 본다.
+    """
     headers = _auth(client, "self_diffyear@test.com", "동명이인", "서울대학교",
                      admission_year=2020)
     res = client.post("/game/ojakgyo", json={

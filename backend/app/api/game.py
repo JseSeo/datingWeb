@@ -165,8 +165,12 @@ def get_red_thread_received(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    # 매칭(_identity_resolver)과 어긋나지 않게 학번도 걸러야 한다 — 이름+학교만
+    # 보면 동명이인(학번 다름)에게 온 실도 내 것으로 세어져 매칭 결과와 수가 달라진다
+    my_year = current_user.admission_year or 0
     count = db.query(RedThread).filter(
         RedThread.target_name == current_user.name.strip(),
         RedThread.target_university == current_user.university.strip(),
+        RedThread.target_admission_year.in_({0, my_year}),
     ).count()
     return RedThreadReceivedOut(count=count)

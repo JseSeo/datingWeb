@@ -82,10 +82,15 @@ def pair_key(a: int, b: int) -> tuple[int, int]:
 
 def _has_contact():
     """연락처 1개 이상 (설계 §7.2). 빈 문자열·공백만 있는 값도 없는 것으로 본다 —
-    스키마는 None으로 정규화하지만 과거 데이터나 DB 직접 수정이 남길 수 있다."""
+    스키마는 None으로 정규화하지만 과거 데이터나 DB 직접 수정이 남길 수 있다.
+
+    문자 집합을 명시해야 한다 — 인자 없는 SQL TRIM은 스페이스만 지운다
+    (SQLite·PostgreSQL 공통). 지정 없이 쓰면 탭·개행만 있는 값이 스키마에서는
+    없는 것으로 보이는데 여기서는 있는 것으로 남아 세 층위 판정이 갈라진다.
+    """
     return or_(
         *[
-            and_(column.isnot(None), func.trim(column) != "")
+            and_(column.isnot(None), func.trim(column, " \t\r\n") != "")
             for column in (User.instagram, User.kakao_id, User.phone)
         ]
     )
@@ -174,6 +179,10 @@ def game_signals(
         if target_id is not None:
             targets[thread.user_id].add(target_id)
 
+    # 붉은실은 제출자 자신이 페어의 한쪽이라 자기지목 우회 구조가 아니다 — 대상이
+    # 학번만 다르게 적은 자신으로 풀려도 usable()의 성별 비교(자기 자신과는 항상
+    # 같음)가 이미 걸러낸다. 오작교처럼 "제3자가 지목한 두 사람" 구조가 아니므로
+    # 지목자 자신을 별도로 걸러낼 지점이 없다.
     red: set[tuple[int, int]] = set()
     for user_id, target_ids in targets.items():
         for target_id in target_ids:
@@ -190,6 +199,11 @@ def game_signals(
         )
         # 같은 지목자가 같은 쌍을 두 번 넣는 건 DB 유니크 제약이 이미 막는다
         if a is None or b is None or a == b or not usable(a, b):
+            continue
+        # 지목자가 자기 학번만 다르게 적어 §6.3 폴백(후보 1명이면 학번 무시하고
+        # 확정)으로 스스로에게 되돌아오는 경우 — API 단계에선 학번이 다르면
+        # "다른 사람"이라 판단해 막을 수 없으므로 투표가 집계되는 여기서 막는다
+        if entry.recommender_id in (a, b):
             continue
         counts[pair_key(a, b)] += 1
 

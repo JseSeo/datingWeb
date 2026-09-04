@@ -41,6 +41,19 @@ describe("Profile", () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
+  it("공백만 입력한 연락처는 없는 것으로 보고 저장을 막는다", async () => {
+    const spy = vi.spyOn(api, "updateProfile");
+    renderProfile();
+    fireEvent.change(screen.getByLabelText("인스타그램"), {
+      target: { value: "   " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    await waitFor(() =>
+      expect(screen.getByText("연락처를 1개 이상 입력하세요")).toBeInTheDocument(),
+    );
+    expect(spy).not.toHaveBeenCalled();
+  });
+
   it("연락처 1개 있으면 저장 호출", async () => {
     const spy = vi.spyOn(api, "updateProfile").mockResolvedValue(user);
     renderProfile();

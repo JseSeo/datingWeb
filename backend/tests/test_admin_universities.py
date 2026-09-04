@@ -1,6 +1,15 @@
 from fastapi.testclient import TestClient
 
+from app.models.game import Ojakgyo, RedThread
+from app.models.match import MatchingUniversityWeight
+from app.models.user import User
+from tests.conftest import TestingSessionLocal
+
 URL = "/admin/universities"
+
+
+def _admin_id(db) -> int:
+    return db.query(User).filter(User.email == "admin@datedrop.kr").first().id
 
 
 def test_create(admin_client: TestClient):
@@ -45,6 +54,56 @@ def test_delete_referenced_by_user_is_conflict(admin_client: TestClient):
     listed = admin_client.get(URL).json()
     snu = next(u for u in listed if u["name"] == "서울대학교")
     res = admin_client.delete(f"{URL}/{snu['id']}")
+    assert res.status_code == 409
+
+
+def test_delete_referenced_by_ojakgyo_is_conflict(admin_client: TestClient):
+    """스펙 §12: 4개 참조 지점 전부 delete 409 가드 대상이다 — 오작교 쪽."""
+    listed = admin_client.get(URL).json()
+    yonsei = next(u for u in listed if u["name"] == "연세대학교")
+
+    db = TestingSessionLocal()
+    db.add(Ojakgyo(
+        recommender_id=_admin_id(db),
+        person_a_name="가", person_a_university="연세대학교",
+        person_b_name="나", person_b_university="B대",
+    ))
+    db.commit()
+    db.close()
+
+    res = admin_client.delete(f"{URL}/{yonsei['id']}")
+    assert res.status_code == 409
+
+
+def test_delete_referenced_by_red_thread_is_conflict(admin_client: TestClient):
+    """스펙 §12: 4개 참조 지점 전부 delete 409 가드 대상이다 — 붉은 실 쪽."""
+    listed = admin_client.get(URL).json()
+    korea = next(u for u in listed if u["name"] == "고려대학교")
+
+    db = TestingSessionLocal()
+    db.add(RedThread(
+        user_id=_admin_id(db), target_name="다", target_university="고려대학교",
+    ))
+    db.commit()
+    db.close()
+
+    res = admin_client.delete(f"{URL}/{korea['id']}")
+    assert res.status_code == 409
+
+
+def test_delete_referenced_by_university_weight_is_conflict(admin_client: TestClient):
+    """스펙 §12: 4개 참조 지점 전부 delete 409 가드 대상이다 — 대학 가중치 쪽."""
+    listed = admin_client.get(URL).json()
+    sungkyunkwan = next(u for u in listed if u["name"] == "성균관대학교")
+
+    db = TestingSessionLocal()
+    db.add(MatchingUniversityWeight(
+        university_a="성균관대학교", university_b="", bonus=10,
+    ))
+    db.commit()
+    db.close()
+
+    res = admin_client.delete(f"{URL}/{sungkyunkwan['id']}")
     assert res.status_code == 409
 
 

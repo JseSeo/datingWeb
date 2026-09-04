@@ -22,11 +22,13 @@ def make_user(
     name: str = "테스트",
     university: str = "서울대학교",
     kakao_id: str | None = "kakao_default",
+    admission_year: int | None = None,
 ) -> User:
     user = User(
         email=email, password_hash="x", name=name, university=university,
         gender=gender, status=status, matching_paused=paused,
         missed_rounds=missed_rounds, kakao_id=kakao_id,
+        admission_year=admission_year,
     )
     db.add(user)
     db.commit()
@@ -68,12 +70,21 @@ def test_empty_string_contact_counts_as_missing():
 
 
 def test_whitespace_only_contact_counts_as_missing():
-    """공백만 있는 연락처는 실제로 연락 불가능하다 — 없는 것과 같다."""
+    """공백만 있는 연락처는 실제로 연락 불가능하다 — 없는 것과 같다.
+
+    스페이스뿐 아니라 탭·개행뿐인 값도 마찬가지다 — 인자 없는 SQL TRIM은
+    스페이스만 지우므로, 문자 집합을 명시하지 않으면 이 값이 Pydantic 스키마의
+    strip()과 다르게 "있음"으로 남는다 (세 층위 판정 불일치).
+    """
     db = TestingSessionLocal()
-    user = make_user(db, "whitespacecontact@test.com")
-    user.kakao_id = "   "
+    space_only = make_user(db, "whitespacecontact@test.com")
+    space_only.kakao_id = "   "
+    tab_newline_only = make_user(db, "tabnewlinecontact@test.com")
+    tab_newline_only.kakao_id = "\t\n\r"
     db.commit()
-    assert user.id not in [u.id for u in matching.eligible_users(db)]
+    eligible_ids = [u.id for u in matching.eligible_users(db)]
+    assert space_only.id not in eligible_ids
+    assert tab_newline_only.id not in eligible_ids
     db.close()
 
 
@@ -182,6 +193,32 @@ def test_ojakgyo_counts_recommenders():
 
     _, counts = matching.game_signals(db, matching.eligible_users(db))
     assert counts == {matching.pair_key(a.id, b.id): 2}
+    db.close()
+
+
+def test_ojakgyo_self_nomination_via_year_mismatch_is_not_counted():
+    """추천인이 자기 학번만 다르게 적어 오작교 한쪽에 자신을 끼워넣어도 집계되지
+    않는다.
+
+    이름+학교가 추천인 본인과 같아도 학번을 다르게 적으면 API 가드(_is_same_person)는
+    "다른 사람"이라 통과시킨다. 하지만 그 이름+학교의 후보가 추천인 한 명뿐이면
+    _identity_resolver의 §6.3 폴백(후보 1명이면 학번 무시)이 그 항목을 추천인
+    자신으로 되돌린다 — game_signals가 이 경우를 걸러야 한다.
+    """
+    db = TestingSessionLocal()
+    recommender = make_user(db, "rec@test.com", Gender.male, name="추천인",
+                             university="A대", admission_year=2021)
+    target = make_user(db, "target@test.com", Gender.female, name="대상", university="B대")
+    db.add(Ojakgyo(
+        recommender_id=recommender.id,
+        person_a_name="추천인", person_a_university="A대",
+        person_a_admission_year=2099,  # 본인과 다른 학번 — API 가드를 통과시키는 값
+        person_b_name="대상", person_b_university="B대",
+    ))
+    db.commit()
+
+    _, counts = matching.game_signals(db, matching.eligible_users(db))
+    assert counts == {}
     db.close()
 
 

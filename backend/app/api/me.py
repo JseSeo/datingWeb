@@ -175,7 +175,10 @@ def update_profile(
         field: changes.get(field, getattr(current_user, field))
         for field in _CONTACT_FIELDS
     }
-    if not any(merged.values()):
+    # 공백만 있는 값도 없는 것으로 본다 — DB에 이 브랜치 이전 데이터나 직접수정으로
+    # 공백뿐인 연락처가 남아있으면 트림 없는 검사는 그걸 "있음"으로 오판해
+    # 마지막 실제 연락처를 지우는 걸 통과시킨다
+    if not any(v and v.strip() for v in merged.values()):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="연락처는 최소 1개를 남겨야 합니다",

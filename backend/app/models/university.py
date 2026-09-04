@@ -1,4 +1,5 @@
 from datetime import datetime
+import sqlalchemy as sa
 from sqlalchemy import Boolean, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
@@ -19,7 +20,9 @@ class University(Base):
         String(100), unique=True, nullable=False, index=True
     )
     # 삭제 대신 끈다 — 이미 그 대학으로 가입한 유저는 그대로 매칭된다 (설계 §5.3)
-    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    active: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default=sa.true(), nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, nullable=False
     )

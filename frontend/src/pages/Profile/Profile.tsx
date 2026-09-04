@@ -36,7 +36,7 @@ export default function Profile() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
-    if (!instagram && !kakaoId && !phone) {
+    if (!instagram.trim() && !kakaoId.trim() && !phone.trim()) {
       setError("연락처를 1개 이상 입력하세요");
       return;
     }

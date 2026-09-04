@@ -112,7 +112,7 @@ describe("Register 동의 게이트", () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
-  it("이메일이 비면 제출을 막고 커스텀 에러를 보여준다 (noValidate 경로 검증)", async () => {
+  it("이메일 형식이 아니면 커스텀 검증이 제출을 막고 에러를 보여준다", async () => {
     const spy = vi.spyOn(api, "registerUser").mockResolvedValue({} as never);
     renderRegister();
     await screen.findByRole("combobox", { name: "학교" });
