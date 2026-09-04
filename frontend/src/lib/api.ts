@@ -21,6 +21,7 @@ import type {
   SurveyCatalog,
   UniversityWeightOut,
   UniversityWeightIn,
+  UniversityOut,
 } from "./types";
 
 const BASE = import.meta.env.VITE_API_URL;
@@ -302,4 +303,30 @@ export function updateUniversityWeight(
 
 export function deleteUniversityWeight(id: number): Promise<void> {
   return apiFetch<void>(`/admin/university-weights/${id}`, { method: "DELETE" });
+}
+
+export function listUniversities(): Promise<UniversityOut[]> {
+  return apiFetch<UniversityOut[]>("/universities");
+}
+
+export function listAllUniversities(): Promise<UniversityOut[]> {
+  return apiFetch<UniversityOut[]>("/admin/universities");
+}
+
+export function createUniversity(name: string): Promise<UniversityOut> {
+  return apiFetch<UniversityOut>("/admin/universities", {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function setUniversityActive(id: number, active: boolean): Promise<UniversityOut> {
+  return apiFetch<UniversityOut>(`/admin/universities/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ active }),
+  });
+}
+
+export function deleteUniversity(id: number): Promise<void> {
+  return apiFetch<void>(`/admin/universities/${id}`, { method: "DELETE" });
 }

@@ -154,6 +154,12 @@ export interface UniversityWeightIn {
   note: string | null;
 }
 
+export interface UniversityOut {
+  id: number;
+  name: string;
+  active: boolean;
+}
+
 export interface MatchResultOut {
   name: string;
   university: string;
