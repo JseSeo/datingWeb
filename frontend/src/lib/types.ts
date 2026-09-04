@@ -136,6 +136,24 @@ export interface MatchingRunOut {
   guaranteed: number;
 }
 
+export interface UniversityWeightOut {
+  id: number;
+  university_a: string;
+  university_b: string;
+  bonus: number;
+  active: boolean;
+  note: string | null;
+}
+
+/** 생성·수정 공용 본문. university_b가 빈 문자열이면 단일 대학 규칙. */
+export interface UniversityWeightIn {
+  university_a: string;
+  university_b: string;
+  bonus: number;
+  active: boolean;
+  note: string | null;
+}
+
 export interface MatchResultOut {
   name: string;
   university: string;

@@ -19,6 +19,8 @@ import type {
   MatchingRunOut,
   MatchResultOut,
   SurveyCatalog,
+  UniversityWeightOut,
+  UniversityWeightIn,
 } from "./types";
 
 const BASE = import.meta.env.VITE_API_URL;
@@ -271,4 +273,33 @@ export function resetMatchRound(id: number): Promise<AdminMatchRoundOut> {
   return apiFetch<AdminMatchRoundOut>(`/admin/match-rounds/${id}/reset`, {
     method: "POST",
   });
+}
+
+export function listUniversityWeights(): Promise<UniversityWeightOut[]> {
+  return apiFetch<UniversityWeightOut[]>("/admin/university-weights", {
+    method: "GET",
+  });
+}
+
+export function createUniversityWeight(
+  payload: UniversityWeightIn,
+): Promise<UniversityWeightOut> {
+  return apiFetch<UniversityWeightOut>("/admin/university-weights", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateUniversityWeight(
+  id: number,
+  payload: UniversityWeightIn,
+): Promise<UniversityWeightOut> {
+  return apiFetch<UniversityWeightOut>(`/admin/university-weights/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteUniversityWeight(id: number): Promise<void> {
+  return apiFetch<void>(`/admin/university-weights/${id}`, { method: "DELETE" });
 }

@@ -8,7 +8,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.game import Ojakgyo, RedThread
-from app.models.match import Match, MatchRound, RoundStatus
+from app.models.match import Match, MatchingUniversityWeight, MatchRound, RoundStatus
 from app.models.survey import Survey
 from app.models.user import Gender, User, UserStatus
 from app.services.pairing import optimal_pairs
@@ -20,8 +20,58 @@ logger = logging.getLogger(__name__)
 CARRYOVER_PER_ROUND = 15
 CARRYOVER_CAP = 45
 
-# 설계 §4.2는 4단계 작업이다. 지금은 자리만 마련해 둔다
-UNIVERSITY_BONUS = 0
+# 설계 §4.2 — 관리자가 실수로 큰 값을 넣어도 매칭 전체가 망가지지 않게 하는 상한
+UNIVERSITY_BONUS_CAP = 50
+
+
+def university_pair_key(a: str, b: str) -> tuple[str, str]:
+    """대학쌍을 순서 무관하게 다루기 위한 사전순 정규화 키 (설계 §4.2)."""
+    return (a, b) if a <= b else (b, a)
+
+
+def university_weights(
+    db: Session,
+) -> tuple[dict[str, int], dict[tuple[str, str], int]]:
+    """active 규칙을 단일용·쌍용 조회표 두 개로 나눠 한 번에 읽는다.
+
+    라운드가 도는 중에 관리자가 규칙을 바꿔도 결과가 흔들리지 않도록 실행 시작에
+    한 번만 읽는다 (설계 §5.2 결정론성).
+    """
+    singles: dict[str, int] = {}
+    pairs: dict[tuple[str, str], int] = {}
+    rows = (
+        db.query(MatchingUniversityWeight)
+        .filter(MatchingUniversityWeight.active.is_(True))
+        .order_by(MatchingUniversityWeight.id)
+        .all()
+    )
+    for row in rows:
+        if row.university_b == "":
+            singles[row.university_a] = row.bonus
+        else:
+            key = university_pair_key(row.university_a, row.university_b)
+            # 순서가 뒤집힌 중복 행은 유니크가 못 막는다 — 덮어쓰면 어느 쪽이 남는지가
+            # DB 반환 순서에 좌우되므로 합산한다
+            pairs[key] = pairs.get(key, 0) + row.bonus
+    return singles, pairs
+
+
+def university_bonus(
+    a: str,
+    b: str,
+    singles: dict[str, int],
+    pairs: dict[tuple[str, str], int],
+) -> int:
+    """겹치는 규칙은 합산하되 ±UNIVERSITY_BONUS_CAP으로 자른다 (설계 §4.2).
+
+    합산은 규칙 행 기준이다 — 같은 대학끼리인 페어에서 그 대학의 단일 규칙은
+    한 번만 붙는다.
+    """
+    total = singles.get(a, 0)
+    if b != a:
+        total += singles.get(b, 0)
+    total += pairs.get(university_pair_key(a, b), 0)
+    return max(-UNIVERSITY_BONUS_CAP, min(UNIVERSITY_BONUS_CAP, total))
 
 
 def pair_key(a: int, b: int) -> tuple[int, int]:
@@ -212,6 +262,7 @@ def _execute(db: Session, round_: MatchRound) -> MatchingResult:
     women = [u for u in pool if u.gender == Gender.female]
     excluded = past_pairs(db)
     red, ojakgyo_counts = game_signals(db, pool)
+    uni_singles, uni_pairs = university_weights(db)
 
     base: dict[tuple[int, int], float] = {}   # 보정 전 궁합 점수 (Match.score에 기록)
     adjusted: dict[tuple[int, int], float] = {}  # 보정까지 얹은 매칭용 점수
@@ -233,11 +284,17 @@ def _execute(db: Session, round_: MatchRound) -> MatchingResult:
                 skipped[woman.id] += 1
                 continue
             base[key] = score
-            bonus = carryover_bonus(man) + carryover_bonus(woman) + UNIVERSITY_BONUS
+            bonus = (
+                carryover_bonus(man)
+                + carryover_bonus(woman)
+                + university_bonus(man.university, woman.university, uni_singles, uni_pairs)
+            )
             count = ojakgyo_counts.get(key, 0)
             if 0 < count < OJAKGYO_GUARANTEE_COUNT:
                 bonus += OJAKGYO_BONUS * count
-            adjusted[key] = score + bonus
+            # 0에서 바닥. 음수가 되면 pairing이 "둘 다 미매칭"을 더 낫다고 봐서
+            # 설계에 없는 최소 점수 컷이 생긴다 (pairing.py의 _MATCH_BONUS 주석 참고)
+            adjusted[key] = max(0.0, score + bonus)
 
     if skipped:
         logger.error(
