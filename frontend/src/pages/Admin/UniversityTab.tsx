@@ -72,7 +72,7 @@ export default function UniversityTab() {
   if (loading) return <p>불러오는 중…</p>;
 
   return (
-    <div className={styles.panel}>
+    <div className={styles.wrap}>
       <form onSubmit={handleCreate}>
         <Input
           id="university-name"
@@ -83,7 +83,7 @@ export default function UniversityTab() {
         <Button type="submit">추가</Button>
       </form>
 
-      <p className={styles.hint}>
+      <p className={styles.summary}>
         이름은 등록 후 바꿀 수 없습니다. 쓰지 않는 대학은 삭제 대신 끄세요.
       </p>
 

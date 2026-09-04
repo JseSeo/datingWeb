@@ -1,5 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import UniversityTab from "./UniversityTab";
 import * as api from "../../lib/api";
@@ -23,8 +22,10 @@ describe("UniversityTab", () => {
       id: 3, name: "한양대학교", active: true,
     });
     render(<UniversityTab />);
-    await userEvent.type(await screen.findByLabelText("대학명"), "한양대학교");
-    await userEvent.click(screen.getByRole("button", { name: "추가" }));
+    fireEvent.change(await screen.findByLabelText("대학명"), {
+      target: { value: "한양대학교" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "추가" }));
     await waitFor(() => expect(create).toHaveBeenCalledWith("한양대학교"));
   });
 
@@ -34,7 +35,7 @@ describe("UniversityTab", () => {
     );
     render(<UniversityTab />);
     const rows = await screen.findAllByRole("button", { name: "삭제" });
-    await userEvent.click(rows[0]);
+    fireEvent.click(rows[0]);
     expect(await screen.findByText(/삭제 대신 비활성/)).toBeInTheDocument();
   });
 });
