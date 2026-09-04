@@ -19,10 +19,15 @@ router = APIRouter(prefix="/game", tags=["game"])
 
 
 def _normalize_pair(a_name, a_univ, a_year, b_name, b_univ, b_year):
-    """두 사람을 순서무관하게 정규화 — (name, university) 튜플 비교로 항상 같은 순서 보장."""
+    """두 사람을 순서무관하게 정규화 — (name, university, year) 튜플 비교로 항상 같은 순서 보장.
+
+    학번까지 포함해 비교해야 한다 — (name, university)만 보면 학번만 다른 동명이인
+    쌍이 제출 순서를 그대로 유지해 (A, B)와 (B, A)가 서로 다른 정규화 결과로 남고,
+    409 사전검사와 유니크 제약을 모두 통과해 같은 지목이 두 번 저장된다.
+    """
     a = (a_name, a_univ, a_year)
     b = (b_name, b_univ, b_year)
-    return (a, b) if a[:2] <= b[:2] else (b, a)
+    return (a, b) if a <= b else (b, a)
 
 
 def _is_same_person(name_univ_a: tuple[str, str], year_a: int,

@@ -55,6 +55,26 @@ def test_red_thread_rejects_unlisted_university(client: TestClient):
     assert res.status_code == 422
 
 
+def test_ojakgyo_rejects_out_of_range_year(client: TestClient):
+    """공유 검증기(check_admission_year)가 오작교 스키마에도 연결돼 있어야 한다."""
+    headers = _auth(client, "ojyear@test.com")
+    res = client.post("/game/ojakgyo", json={
+        "person_a_name": "가", "person_a_university": "B대",
+        "person_a_admission_year": 1999,
+        "person_b_name": "나", "person_b_university": "B대",
+    }, headers=headers)
+    assert res.status_code == 422
+
+
+def test_red_thread_rejects_out_of_range_year(client: TestClient):
+    """공유 검증기(check_admission_year)가 붉은 실 스키마에도 연결돼 있어야 한다."""
+    headers = _auth(client, "rtyear@test.com")
+    res = client.post("/game/red-thread", json={"targets": [
+        {"target_name": "갑", "target_university": "B대", "target_admission_year": 1999},
+    ]}, headers=headers)
+    assert res.status_code == 422
+
+
 def test_weight_rejects_unlisted_university(admin_client: TestClient):
     res = admin_client.post("/admin/university-weights", json={
         "university_a": UNLISTED, "university_b": "", "bonus": 10,

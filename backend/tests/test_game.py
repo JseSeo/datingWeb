@@ -1,5 +1,9 @@
 from fastapi.testclient import TestClient
 
+from app.models.game import Ojakgyo
+from app.models.user import User
+from tests.conftest import TestingSessionLocal
+
 
 def _auth(client: TestClient, email="user@test.com", name="홍길동", university="서울대학교",
           admission_year=None) -> dict:
@@ -409,3 +413,35 @@ def test_red_thread_self_missing_year_forbidden(client: TestClient):
         {"target_name": "동명이인3", "target_university": "서울대학교"},
     ]}, headers=headers)
     assert res.status_code == 400
+
+
+def test_ojakgyo_namesake_reversed_order_conflict(client: TestClient):
+    """정규화가 학번까지 비교해야 한다 (설계 §6 리뷰 지적).
+
+    (name, university)만으로 정렬하면 학번만 다른 동명이인 쌍은 제출 순서를 그대로
+    유지해 (A, B)와 (B, A)가 서로 다른 정규화 결과로 남고, 같은 지목이 두 번 저장된다.
+    """
+    headers = _auth(client, "namesake_reorder@test.com", "지목자")
+    body1 = {
+        "person_a_name": "김철수", "person_a_university": "서울대학교",
+        "person_a_admission_year": 2021,
+        "person_b_name": "김철수", "person_b_university": "서울대학교",
+        "person_b_admission_year": 2022,
+    }
+    assert client.post("/game/ojakgyo", json=body1, headers=headers).status_code == 201
+
+    # 같은 두 사람, person_a/person_b 순서만 뒤집어 재지목
+    body2 = {
+        "person_a_name": "김철수", "person_a_university": "서울대학교",
+        "person_a_admission_year": 2022,
+        "person_b_name": "김철수", "person_b_university": "서울대학교",
+        "person_b_admission_year": 2021,
+    }
+    res = client.post("/game/ojakgyo", json=body2, headers=headers)
+    assert res.status_code == 409
+
+    db = TestingSessionLocal()
+    recommender = db.query(User).filter(User.email == "namesake_reorder@test.com").first()
+    count = db.query(Ojakgyo).filter(Ojakgyo.recommender_id == recommender.id).count()
+    db.close()
+    assert count == 1

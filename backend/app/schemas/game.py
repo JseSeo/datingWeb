@@ -23,13 +23,19 @@ class OjakgyoOut(BaseModel):
     recommender_id: int
     person_a_name: str
     person_a_university: str
-    person_a_admission_year: int
+    person_a_admission_year: int | None
     person_b_name: str
     person_b_university: str
-    person_b_admission_year: int
+    person_b_admission_year: int | None
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+    @field_validator("person_a_admission_year", "person_b_admission_year")
+    @classmethod
+    def sentinel_to_none(cls, v: int | None) -> int | None:
+        """저장은 0 센티넬이지만 API는 0을 요구한 적이 없다 — 응답에서도 미입력은 None (설계 §4.2)."""
+        return None if v == 0 else v
 
 
 class RedThreadTarget(BaseModel):
@@ -50,9 +56,15 @@ class RedThreadSubmit(BaseModel):
 class RedThreadTargetOut(BaseModel):
     target_name: str
     target_university: str
-    target_admission_year: int
+    target_admission_year: int | None
 
     model_config = {"from_attributes": True}
+
+    @field_validator("target_admission_year")
+    @classmethod
+    def sentinel_to_none(cls, v: int | None) -> int | None:
+        """저장은 0 센티넬이지만 API는 0을 요구한 적이 없다 — 응답에서도 미입력은 None (설계 §4.2)."""
+        return None if v == 0 else v
 
 
 class RedThreadOut(BaseModel):
