@@ -80,6 +80,23 @@ describe("Register 동의 게이트", () => {
     ));
   });
 
+  it("학번 없이도 가입할 수 있다", async () => {
+    const spy = vi.spyOn(api, "registerUser").mockResolvedValue({} as never);
+    renderRegister();
+    await fillFields();
+    fireEvent.click(screen.getByLabelText("전체 동의"));
+    fireEvent.click(screen.getByRole("button", { name: "가입하기" }));
+    await waitFor(() => expect(spy).toHaveBeenCalledWith(
+      expect.objectContaining({ admission_year: null }),
+    ));
+  });
+
+  it("동명이인 안내를 보여준다", async () => {
+    renderRegister();
+    await screen.findByRole("combobox", { name: "학교" });
+    expect(screen.getByText(/동명이인과 구분되지 않을 수 있습니다/)).toBeInTheDocument();
+  });
+
   it("연락처를 하나도 안 채우면 제출을 막는다", async () => {
     const spy = vi.spyOn(api, "registerUser").mockResolvedValue({} as never);
     renderRegister();

@@ -17,6 +17,7 @@ export default function Register() {
   const [instagram, setInstagram] = useState("");
   const [kakaoId, setKakaoId] = useState("");
   const [phone, setPhone] = useState("");
+  const [admissionYear, setAdmissionYear] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [agreedTerms, setAgreedTerms] = useState(false);
@@ -59,6 +60,7 @@ export default function Register() {
         instagram: instagram.trim() || null,
         kakao_id: kakaoId.trim() || null,
         phone: phone.trim() || null,
+        admission_year: Number(admissionYear) || null,
       });
       navigate("/login", { state: { registered: true } });
     } catch (err) {
@@ -98,6 +100,11 @@ export default function Register() {
           onChange={(e) => setKakaoId(e.target.value)} />
         <Input id="phone" label="전화번호" value={phone}
           onChange={(e) => setPhone(e.target.value)} />
+        <Input id="admission-year" label="학번 (입학년도)" type="number" value={admissionYear}
+          onChange={(e) => setAdmissionYear(e.target.value)} />
+        <p className={styles.notice}>
+          선택 입력. 입력하지 않으면 다른 사람이 회원님을 지목할 때 동명이인과 구분되지 않을 수 있습니다.
+        </p>
         <fieldset className={styles.consent}>
           <label>
             <input type="checkbox" checked={allAgreed} onChange={toggleAll} />
