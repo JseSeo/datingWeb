@@ -6,6 +6,7 @@ import {
   ApiError,
 } from "../../lib/api";
 import { Input } from "../../components/Input/Input";
+import { UniversitySelect } from "../../components/UniversitySelect/UniversitySelect";
 import { Button } from "../../components/Button/Button";
 import styles from "./Game.module.css";
 
@@ -82,12 +83,12 @@ export default function RedThreadTab() {
       <p className={styles.hint}>마음에 둔 상대를 최대 2명까지 적어주세요. (최소 1명)</p>
       <Input id="rt-name1" label="상대1 이름" value={name1}
         onChange={(e) => setName1(e.target.value)} />
-      <Input id="rt-univ1" label="상대1 학교" value={univ1}
-        onChange={(e) => setUniv1(e.target.value)} />
+      <UniversitySelect id="rt-univ1" label="상대1 학교" value={univ1}
+        onChange={setUniv1} />
       <Input id="rt-name2" label="상대2 이름" value={name2}
         onChange={(e) => setName2(e.target.value)} />
-      <Input id="rt-univ2" label="상대2 학교" value={univ2}
-        onChange={(e) => setUniv2(e.target.value)} />
+      <UniversitySelect id="rt-univ2" label="상대2 학교" value={univ2}
+        onChange={setUniv2} />
       {error && <p className={styles.error}>{error}</p>}
       {message && <p className={styles.success}>{message}</p>}
       <Button type="submit" disabled={submitting || !canSubmit}>

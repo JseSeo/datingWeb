@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { postOjakgyo, ApiError } from "../../lib/api";
 import { Input } from "../../components/Input/Input";
+import { UniversitySelect } from "../../components/UniversitySelect/UniversitySelect";
 import { Button } from "../../components/Button/Button";
 import styles from "./Game.module.css";
 
@@ -49,12 +50,12 @@ export default function OjakgyoTab() {
       <p className={styles.hint}>마음이 잘 맞을 것 같은 두 사람을 이어주세요.</p>
       <Input id="a-name" label="사람1 이름" value={aName}
         onChange={(e) => setAName(e.target.value)} />
-      <Input id="a-univ" label="사람1 학교" value={aUniv}
-        onChange={(e) => setAUniv(e.target.value)} />
+      <UniversitySelect id="a-univ" label="사람1 학교" value={aUniv}
+        onChange={setAUniv} required />
       <Input id="b-name" label="사람2 이름" value={bName}
         onChange={(e) => setBName(e.target.value)} />
-      <Input id="b-univ" label="사람2 학교" value={bUniv}
-        onChange={(e) => setBUniv(e.target.value)} />
+      <UniversitySelect id="b-univ" label="사람2 학교" value={bUniv}
+        onChange={setBUniv} required />
       {error && <p className={styles.error}>{error}</p>}
       {message && <p className={styles.success}>{message}</p>}
       <Button type="submit" disabled={submitting}>

@@ -4,7 +4,13 @@ import OjakgyoTab from "./OjakgyoTab";
 import * as api from "../../lib/api";
 import { ApiError } from "../../lib/api";
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.spyOn(api, "listUniversities").mockResolvedValue([
+    { id: 1, name: "서울대학교", active: true },
+    { id: 2, name: "연세대학교", active: true },
+  ]);
+});
 
 function fill(label: string, value: string) {
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
@@ -15,6 +21,7 @@ describe("OjakgyoTab", () => {
     const spy = vi.spyOn(api, "postOjakgyo");
     render(<OjakgyoTab />);
     fill("사람1 이름", "김철수");
+    await screen.findByRole("combobox", { name: "사람1 학교" });
     fill("사람1 학교", "서울대학교");
     fill("사람2 이름", "김철수");
     fill("사람2 학교", "서울대학교");
@@ -34,6 +41,7 @@ describe("OjakgyoTab", () => {
     });
     render(<OjakgyoTab />);
     fill("사람1 이름", "김철수");
+    await screen.findByRole("combobox", { name: "사람1 학교" });
     fill("사람1 학교", "서울대학교");
     fill("사람2 이름", "이영희");
     fill("사람2 학교", "연세대학교");
@@ -50,6 +58,7 @@ describe("OjakgyoTab", () => {
     );
     render(<OjakgyoTab />);
     fill("사람1 이름", "김철수");
+    await screen.findByRole("combobox", { name: "사람1 학교" });
     fill("사람1 학교", "서울대학교");
     fill("사람2 이름", "이영희");
     fill("사람2 학교", "연세대학교");

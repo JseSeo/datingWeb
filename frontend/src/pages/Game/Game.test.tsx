@@ -8,12 +8,17 @@ beforeEach(() => {
   // 붉은실 탭 마운트 시 호출되는 로드 API stub
   vi.spyOn(api, "getRedThread").mockResolvedValue({ targets: [] });
   vi.spyOn(api, "getRedThreadReceived").mockResolvedValue({ count: 0 });
+  // 오작교/붉은실 탭의 학교 셀렉트가 마운트 시 호출하는 목록 API stub
+  vi.spyOn(api, "listUniversities").mockResolvedValue([
+    { id: 1, name: "서울대학교", active: true },
+  ]);
 });
 
 describe("Game", () => {
-  it("기본은 오작교 탭 노출", () => {
+  it("기본은 오작교 탭 노출", async () => {
     render(<Game />);
     expect(screen.getByRole("button", { name: "중매하기" })).toBeInTheDocument();
+    await screen.findByRole("combobox", { name: "사람1 학교" });
   });
 
   it("붉은실 탭 클릭 시 붉은실 화면으로 전환", async () => {

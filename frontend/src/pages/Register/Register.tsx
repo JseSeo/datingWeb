@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { registerUser, ApiError } from "../../lib/api";
 import { Input } from "../../components/Input/Input";
+import { UniversitySelect } from "../../components/UniversitySelect/UniversitySelect";
 import { Button } from "../../components/Button/Button";
 import { ConsentModal } from "./ConsentModal";
 import styles from "./Register.module.css";
@@ -33,7 +34,7 @@ export default function Register() {
     if (!email.includes("@")) return "올바른 이메일을 입력하세요";
     if (password.length < 8) return "비밀번호는 8자 이상이어야 합니다";
     if (!name.trim()) return "이름을 입력하세요";
-    if (!university.trim()) return "학교를 입력하세요";
+    if (!university.trim()) return "학교를 선택하세요";
     if (!gender) return "성별을 선택하세요";
     return "";
   }
@@ -61,15 +62,15 @@ export default function Register() {
   return (
     <div className={styles.wrap}>
       <h1 className={styles.title}>회원가입</h1>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} noValidate>
         <Input id="email" label="이메일" type="email" value={email}
           onChange={(e) => setEmail(e.target.value)} />
         <Input id="password" label="비밀번호 (8자 이상)" type="password" value={password}
           onChange={(e) => setPassword(e.target.value)} />
         <Input id="name" label="이름" value={name}
           onChange={(e) => setName(e.target.value)} />
-        <Input id="university" label="학교" value={university}
-          onChange={(e) => setUniversity(e.target.value)} />
+        <UniversitySelect id="university" label="학교" value={university}
+          onChange={setUniversity} required />
         <fieldset className={styles.gender}>
           <legend>성별</legend>
           <label>

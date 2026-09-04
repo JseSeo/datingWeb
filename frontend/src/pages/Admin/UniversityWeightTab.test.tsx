@@ -15,13 +15,17 @@ const PAIR = {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(window, "confirm").mockReturnValue(true);
+  vi.spyOn(api, "listUniversities").mockResolvedValue([
+    { id: 1, name: "서울대학교", active: true },
+    { id: 2, name: "고려대학교", active: true },
+  ]);
 });
 
 describe("UniversityWeightTab", () => {
   it("단일 규칙과 쌍 규칙을 구분해 보여준다", async () => {
     vi.spyOn(api, "listUniversityWeights").mockResolvedValue([SINGLE, PAIR]);
     render(<UniversityWeightTab />);
-    expect(await screen.findByText("서울대학교")).toBeInTheDocument();
+    expect(await screen.findByText("서울대학교", { selector: "div" })).toBeInTheDocument();
     expect(screen.getByText("고려대학교 × 연세대학교")).toBeInTheDocument();
     expect(screen.getByText("+30점")).toBeInTheDocument();
     expect(screen.getByText("-10점")).toBeInTheDocument();
@@ -45,7 +49,7 @@ describe("UniversityWeightTab", () => {
     render(<UniversityWeightTab />);
     await screen.findByText("등록된 규칙 없음");
 
-    fireEvent.change(screen.getByLabelText(/대학 A/), { target: { value: "서울대학교" } });
+    fireEvent.change(await screen.findByRole("combobox", { name: "대학 A" }), { target: { value: "서울대학교" } });
     fireEvent.change(screen.getByLabelText(/보너스/), { target: { value: "30" } });
     fireEvent.click(screen.getByRole("button", { name: "추가" }));
 
@@ -53,7 +57,7 @@ describe("UniversityWeightTab", () => {
       university_a: "서울대학교", university_b: "", bonus: 30,
       active: true, note: null,
     }));
-    expect(await screen.findByText("서울대학교")).toBeInTheDocument();
+    expect(await screen.findByText("서울대학교", { selector: "div" })).toBeInTheDocument();
   });
 
   it("대학명이 비면 요청하지 않고 에러를 띄운다", async () => {
@@ -75,7 +79,7 @@ describe("UniversityWeightTab", () => {
     render(<UniversityWeightTab />);
     await screen.findByText("등록된 규칙 없음");
 
-    fireEvent.change(screen.getByLabelText(/대학 A/), { target: { value: "서울대학교" } });
+    fireEvent.change(await screen.findByRole("combobox", { name: "대학 A" }), { target: { value: "서울대학교" } });
     fireEvent.click(screen.getByRole("button", { name: "추가" }));
 
     expect(await screen.findByText("대학명과 보너스를 확인하세요.")).toBeInTheDocument();

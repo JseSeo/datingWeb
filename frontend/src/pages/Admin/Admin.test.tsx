@@ -9,6 +9,10 @@ beforeEach(() => {
   vi.spyOn(api, "listReports").mockResolvedValue([]);
   vi.spyOn(api, "listMatchRounds").mockResolvedValue([]);
   vi.spyOn(api, "listUniversityWeights").mockResolvedValue([]);
+  // 대학 가중치 탭의 학교 셀렉트가 마운트 시 호출하는 목록 API stub
+  vi.spyOn(api, "listUniversities").mockResolvedValue([
+    { id: 1, name: "서울대학교", active: true },
+  ]);
 });
 
 describe("Admin", () => {

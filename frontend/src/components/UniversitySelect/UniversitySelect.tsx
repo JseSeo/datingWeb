@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { listUniversities } from "../../lib/api";
 import type { UniversityOut } from "../../lib/types";
+import styles from "../Input/Input.module.css";
 
 interface Props {
   id: string;
@@ -29,8 +30,8 @@ export function UniversitySelect({
   }, []);
 
   return (
-    <div>
-      <label htmlFor={id}>{label}</label>
+    <div className={styles.field}>
+      <label htmlFor={id} className={styles.label}>{label}</label>
       <select
         id={id}
         value={value}

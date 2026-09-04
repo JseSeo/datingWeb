@@ -31,7 +31,9 @@ describe("UniversitySelect", () => {
       <UniversitySelect id="u" label="학교" value="" onChange={() => {}} allowEmpty emptyLabel="없음" />
     );
     await waitFor(() => {
-      expect(screen.getByRole("option", { name: "없음" })).toBeInTheDocument();
+      const option = screen.getByRole("option", { name: "없음" }) as HTMLOptionElement;
+      expect(option).toBeInTheDocument();
+      expect(option.value).toBe("");
     });
   });
 });
