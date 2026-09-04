@@ -3,9 +3,10 @@ import VerificationTab from "./VerificationTab";
 import ReportTab from "./ReportTab";
 import RoundTab from "./RoundTab";
 import UniversityWeightTab from "./UniversityWeightTab";
+import UniversityTab from "./UniversityTab";
 import styles from "./Admin.module.css";
 
-type Tab = "verification" | "report" | "round" | "weight";
+type Tab = "verification" | "report" | "round" | "weight" | "university";
 
 export default function Admin() {
   const [tab, setTab] = useState<Tab>("verification");
@@ -54,6 +55,16 @@ export default function Admin() {
         >
           대학 가중치
         </button>
+        <button
+          type="button"
+          role="tab"
+          id="tab-university"
+          aria-selected={tab === "university"}
+          className={tab === "university" ? `${styles.tab} ${styles.tabActive}` : styles.tab}
+          onClick={() => setTab("university")}
+        >
+          대학 목록
+        </button>
       </div>
       {tab === "verification" && (
         <div role="tabpanel" aria-labelledby="tab-verification" tabIndex={0}>
@@ -73,6 +84,11 @@ export default function Admin() {
       {tab === "weight" && (
         <div role="tabpanel" aria-labelledby="tab-weight" tabIndex={0}>
           <UniversityWeightTab />
+        </div>
+      )}
+      {tab === "university" && (
+        <div role="tabpanel" aria-labelledby="tab-university" tabIndex={0}>
+          <UniversityTab />
         </div>
       )}
     </div>
