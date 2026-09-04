@@ -6,6 +6,7 @@ from app.core.deps import get_current_user
 from app.database import get_db
 from app.models.game import Ojakgyo, RedThread
 from app.models.user import User
+from app.services.matching import get_identity_resolver
 from app.schemas.game import (
     OjakgyoCreate,
     OjakgyoOut,
@@ -165,12 +166,22 @@ def get_red_thread_received(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # 매칭(_identity_resolver)과 어긋나지 않게 학번도 걸러야 한다 — 이름+학교만
-    # 보면 동명이인(학번 다름)에게 온 실도 내 것으로 세어져 매칭 결과와 수가 달라진다
-    my_year = current_user.admission_year or 0
-    count = db.query(RedThread).filter(
-        RedThread.target_name == current_user.name.strip(),
-        RedThread.target_university == current_user.university.strip(),
-        RedThread.target_admission_year.in_({0, my_year}),
-    ).count()
+    # 매칭과 수가 어긋나면 안 되므로 학번으로 다시 필터링하는 대신 매칭이 쓰는 것과
+    # 같은 판정 로직(get_identity_resolver)으로 실제로 나를 가리키는지 확인한다 —
+    # 학번이 달라도 이름+학교 후보가 나 하나뿐이면 매칭은 폴백으로 나를 지목한 것으로
+    # 보므로(설계 §6.3) 여기서도 그렇게 세야 한다.
+    resolve = get_identity_resolver(db)
+    my_name = current_user.name.strip()
+    my_university = current_user.university.strip()
+    # 이름+학교가 다르면 resolve()가 나를 반환할 수 없으므로 미리 걸러 스캔 범위를
+    # 좁힌다 — resolver 자체는 요청당 한 번만 만들어 행마다 재사용한다.
+    candidates = db.query(RedThread).filter(
+        RedThread.target_name == my_name,
+        RedThread.target_university == my_university,
+    ).all()
+    count = sum(
+        1 for t in candidates
+        if resolve(t.target_name, t.target_university, t.target_admission_year)
+        == current_user.id
+    )
     return RedThreadReceivedOut(count=count)

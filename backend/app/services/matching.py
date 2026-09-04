@@ -157,6 +157,19 @@ def _identity_resolver(db: Session):
     return resolve
 
 
+def get_identity_resolver(db: Session):
+    """`_identity_resolver`의 공개 창구.
+
+    매칭 파이프라인 밖(API 계층)에서도 "이름+학교+학번이 어느 유저를 가리키는가"를
+    매칭과 똑같은 규칙(학번 불일치 시 이름+학교 단일후보 폴백, 설계 §6.3)으로 판정해야
+    할 때가 있다 — 예: 붉은실 수신함 집계가 매칭 결과와 수가 어긋나면 안 된다. 그렇다고
+    API가 밑줄 붙은 내부 함수를 직접 넘어가 부르게 하면 매칭 모듈의 캡슐화가 깨지므로,
+    동작은 그대로 두고 이 이름으로만 내보낸다. 반환된 resolver는 유저 전체를 인덱싱해
+    만들어지므로 요청당 한 번만 만들어 재사용해야 한다(행마다 새로 만들면 안 됨).
+    """
+    return _identity_resolver(db)
+
+
 def game_signals(
     db: Session, pool: list[User]
 ) -> tuple[set[tuple[int, int]], dict[tuple[int, int], int]]:

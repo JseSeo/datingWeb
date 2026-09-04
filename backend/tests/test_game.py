@@ -225,9 +225,9 @@ def test_red_thread_received_counts_distinct_people(client: TestClient):
     assert res.json()["count"] == 1
 
 
-def test_red_thread_received_excludes_namesake_different_year(client: TestClient):
-    """이름+학교가 같아도 학번이 다른 동명이인에게 온 실은 매칭에서 걸러지듯
-    여기서도 세면 안 된다 (설계 §6.3과 일치)."""
+def test_red_thread_received_counts_lone_namesake_despite_year_mismatch(client: TestClient):
+    """이름+학교 후보가 나 하나뿐이면 학번을 다르게 적어도 매칭은 폴백으로 나를
+    지목한 것으로 본다 (설계 §6.3) — 여기서도 같은 수를 세야 한다."""
     hb = _auth(client, "target3@test.com", "타깃3", "성균관대학교", admission_year=2021)
     h1 = _auth(client, "q2@test.com")
     body = {"targets": [
@@ -236,7 +236,29 @@ def test_red_thread_received_excludes_namesake_different_year(client: TestClient
     ]}
     client.post("/game/red-thread", json=body, headers=h1)
     res = client.get("/game/red-thread/received", headers=hb)
-    assert res.json()["count"] == 0
+    assert res.json()["count"] == 1
+
+
+def test_red_thread_received_distinguishes_real_namesakes_by_year(client: TestClient):
+    """이름+학교가 같은 동명이인이 실제로 둘 등록되어 있으면 학번으로 진짜 갈린다 —
+    상대방 학번을 향한 실은 빠지고 내 학번을 향한 실만 세어져야 매칭과 일치한다
+    (설계 §6.3)."""
+    hb = _auth(client, "target4a@test.com", "타깃4", "성균관대학교", admission_year=2021)
+    _auth(client, "target4b@test.com", "타깃4", "성균관대학교", admission_year=2022)
+    h1 = _auth(client, "q3@test.com")
+    h2 = _auth(client, "q4@test.com")
+    other_year_body = {"targets": [
+        {"target_name": "타깃4", "target_university": "성균관대학교",
+         "target_admission_year": 2022},
+    ]}
+    my_year_body = {"targets": [
+        {"target_name": "타깃4", "target_university": "성균관대학교",
+         "target_admission_year": 2021},
+    ]}
+    client.post("/game/red-thread", json=other_year_body, headers=h1)
+    client.post("/game/red-thread", json=my_year_body, headers=h2)
+    res = client.get("/game/red-thread/received", headers=hb)
+    assert res.json()["count"] == 1
 
 
 def test_red_thread_received_zero(client: TestClient):
