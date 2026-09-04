@@ -104,8 +104,9 @@ def submit_red_thread(
 ):
     validate_universities(db, *[t.target_university.strip() for t in payload.targets])
     me = (current_user.name.strip(), current_user.university.strip())
+    me_year = current_user.admission_year or 0
     cleaned: list[tuple[str, str, int]] = []
-    seen: set[tuple[str, str]] = set()
+    seen: list[tuple[tuple[str, str], int]] = []
     for t in payload.targets:
         name = t.target_name.strip()
         univ = t.target_university.strip()
@@ -116,17 +117,19 @@ def submit_red_thread(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="이름과 학교를 입력해야 합니다",
             )
-        if (name, univ) == me:
+        name_univ = (name, univ)
+        if _is_same_person(me, me_year, name_univ, year):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="본인을 지목할 수 없습니다",
             )
-        if (name, univ) in seen:
+        if any(_is_same_person(name_univ, year, seen_nu, seen_year)
+               for seen_nu, seen_year in seen):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="같은 상대를 두 번 입력할 수 없습니다",
             )
-        seen.add((name, univ))
+        seen.append((name_univ, year))
         cleaned.append((name, univ, year))
 
     # 목록 통째 교체: 기존 전부 삭제 후 재삽입

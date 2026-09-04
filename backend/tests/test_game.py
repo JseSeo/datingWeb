@@ -350,3 +350,62 @@ def test_ojakgyo_self_missing_year_forbidden(client: TestClient):
         "person_b_name": "남", "person_b_university": "고려대학교",
     }, headers=headers)
     assert res.status_code == 400
+
+
+def test_red_thread_namesake_different_year_allowed(client: TestClient):
+    """이름+학교가 같아도 양쪽 다 학번이 있고 다르면 다른 사람 — 둘 다 저장된다 (설계 §6)."""
+    headers = _auth(client, "rt_namesake_diff@test.com")
+    res = client.post("/game/red-thread", json={"targets": [
+        {"target_name": "김철수", "target_university": "서울대학교", "target_admission_year": 2021},
+        {"target_name": "김철수", "target_university": "서울대학교", "target_admission_year": 2022},
+    ]}, headers=headers)
+    assert res.status_code == 200
+    assert len(res.json()["targets"]) == 2
+
+
+def test_red_thread_namesake_same_year_forbidden(client: TestClient):
+    headers = _auth(client, "rt_namesake_same@test.com")
+    res = client.post("/game/red-thread", json={"targets": [
+        {"target_name": "김철수", "target_university": "서울대학교", "target_admission_year": 2021},
+        {"target_name": "김철수", "target_university": "서울대학교", "target_admission_year": 2021},
+    ]}, headers=headers)
+    assert res.status_code == 400
+
+
+def test_red_thread_namesake_missing_year_forbidden(client: TestClient):
+    """한쪽이라도 학번이 없으면 구분할 수 없다 — 안전한 방향인 동일인 취급 (설계 §6)."""
+    headers = _auth(client, "rt_namesake_missing@test.com")
+    res = client.post("/game/red-thread", json={"targets": [
+        {"target_name": "김철수", "target_university": "서울대학교", "target_admission_year": 2021},
+        {"target_name": "김철수", "target_university": "서울대학교"},
+    ]}, headers=headers)
+    assert res.status_code == 400
+
+
+def test_red_thread_self_different_year_allowed(client: TestClient):
+    """본인과 이름+학교가 같아도 학번이 다르면 다른 사람 — 지목 가능 (설계 §6)."""
+    headers = _auth(client, "rt_self_diffyear@test.com", "동명이인", "서울대학교",
+                     admission_year=2020)
+    res = client.post("/game/red-thread", json={"targets": [
+        {"target_name": "동명이인", "target_university": "서울대학교", "target_admission_year": 2021},
+    ]}, headers=headers)
+    assert res.status_code == 200
+
+
+def test_red_thread_self_matching_year_forbidden(client: TestClient):
+    headers = _auth(client, "rt_self_sameyear@test.com", "동명이인2", "서울대학교",
+                     admission_year=2021)
+    res = client.post("/game/red-thread", json={"targets": [
+        {"target_name": "동명이인2", "target_university": "서울대학교", "target_admission_year": 2021},
+    ]}, headers=headers)
+    assert res.status_code == 400
+
+
+def test_red_thread_self_missing_year_forbidden(client: TestClient):
+    """대상 학번이 없으면 구분할 수 없다 — 안전한 방향인 자기지목 차단 유지 (설계 §6)."""
+    headers = _auth(client, "rt_self_noyear@test.com", "동명이인3", "서울대학교",
+                     admission_year=2021)
+    res = client.post("/game/red-thread", json={"targets": [
+        {"target_name": "동명이인3", "target_university": "서울대학교"},
+    ]}, headers=headers)
+    assert res.status_code == 400
