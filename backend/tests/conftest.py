@@ -22,9 +22,23 @@ def override_get_db():
         db.close()
 
 
+# 기존 테스트가 쓰는 대학명 전부. Task 4에서 가입 검증이 켜지면 이 시드가 없는 한
+# 유저를 만드는 모든 테스트가 422로 깨진다.
+BASELINE_UNIVERSITIES = [
+    "서울대학교", "연세대학교", "고려대학교", "성균관대학교",
+    "A대", "B대", "C대",
+]
+
+
 @pytest.fixture(autouse=True)
 def setup_db():
     Base.metadata.create_all(bind=engine)
+    from app.models.university import University
+
+    db = TestingSessionLocal()
+    db.add_all([University(name=name) for name in BASELINE_UNIVERSITIES])
+    db.commit()
+    db.close()
     yield
     Base.metadata.drop_all(bind=engine)
 
