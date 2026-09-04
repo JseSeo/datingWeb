@@ -32,7 +32,10 @@ class RegisterRequest(BaseModel):
     @field_validator("instagram", "kakao_id", "phone", mode="before")
     @classmethod
     def empty_string_to_none(cls, v: str | None) -> str | None:
-        return None if v == "" else v
+        if v is None:
+            return None
+        v = v.strip()
+        return v if v else None
 
     @model_validator(mode="after")
     def at_least_one_contact(self):

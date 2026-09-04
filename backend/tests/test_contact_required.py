@@ -32,3 +32,18 @@ def test_register_stores_contact(client: TestClient):
     }).json()["access_token"]
     me = client.get("/me", headers={"Authorization": f"Bearer {token}"}).json()
     assert me["instagram"] == "drop_insta"
+
+
+def test_register_with_whitespace_only_contact_is_rejected(client: TestClient):
+    """공백만 있는 연락처는 닿을 방법이 없다 — 정규화 후 빈 값과 같아야 한다."""
+    res = _register(client, "whitespace@test.com", kakao_id=" ")
+    assert res.status_code == 422
+
+
+def test_register_strips_contact_before_storing(client: TestClient):
+    _register(client, "strip@test.com", kakao_id="  drop_kakao  ")
+    token = client.post("/auth/login", json={
+        "email": "strip@test.com", "password": "password123",
+    }).json()["access_token"]
+    me = client.get("/me", headers={"Authorization": f"Bearer {token}"}).json()
+    assert me["kakao_id"] == "drop_kakao"
