@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../lib/auth";
-import { getNextRound, getSurvey } from "../../lib/api";
+import { getNextRound, getSurvey, getMyMatch } from "../../lib/api";
 import { formatKST, daysUntilKST } from "../../lib/datetime";
-import type { MatchRoundOut } from "../../lib/types";
+import type { MatchRoundOut, MatchResultOut } from "../../lib/types";
 import styles from "./Home.module.css";
 
 export default function Home() {
@@ -13,14 +13,16 @@ export default function Home() {
   const [roundFailed, setRoundFailed] = useState(false);
   // null = 조회 실패. 실패했으면 설문 관련 안내를 아예 띄우지 않는다.
   const [surveyDone, setSurveyDone] = useState<boolean | null>(null);
+  const [match, setMatch] = useState<MatchResultOut | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 두 정보는 독립이다. 하나가 실패해도 나머지는 표시돼야 해서 allSettled를 쓴다.
-    Promise.allSettled([getNextRound(), getSurvey()]).then(([r, s]) => {
+    // 셋은 서로 독립이다. 하나가 실패해도 나머지는 표시돼야 해서 allSettled를 쓴다.
+    Promise.allSettled([getNextRound(), getSurvey(), getMyMatch()]).then(([r, s, m]) => {
       if (r.status === "fulfilled") setRound(r.value);
       else setRoundFailed(true);
       if (s.status === "fulfilled") setSurveyDone(s.value.updated_at !== null);
+      if (m.status === "fulfilled") setMatch(m.value);
       setLoading(false);
     });
   }, []);
@@ -29,28 +31,44 @@ export default function Home() {
 
   return (
     <div className={styles.wrap}>
-      <h1 className={styles.title}>다음 매칭</h1>
+      <h1 className={styles.title}>{!loading && match ? "이번 주 매칭 결과" : "다음 매칭"}</h1>
 
-      <section className={styles.card}>
-        {loading && <p className={styles.muted}>불러오는 중…</p>}
-        {!loading && roundFailed && (
-          <p className={styles.error}>일정을 불러오지 못했어요</p>
-        )}
-        {!loading && !roundFailed && !round && (
-          <>
-            <p className={styles.empty}>아직 예정된 매칭이 없어요</p>
-            <p className={styles.muted}>일정이 정해지면 여기에 표시돼요</p>
-          </>
-        )}
-        {!loading && round && (
-          <>
-            {days !== null && days >= 0 && (
-              <p className={styles.dday}>{days === 0 ? "D-DAY" : `D-${days}`}</p>
-            )}
-            <p className={styles.when}>{formatKST(round.scheduled_at)}</p>
-          </>
-        )}
-      </section>
+      {!loading && match ? (
+        <section className={styles.card}>
+          <p className={styles.partner}>{match.name}</p>
+          <p className={styles.when}>{match.university}</p>
+          <ul className={styles.contacts}>
+            {match.instagram && <li>인스타그램 @{match.instagram.replace(/^@/, "")}</li>}
+            {match.kakao_id && <li>카카오톡 {match.kakao_id}</li>}
+            {match.phone && <li>전화번호 {match.phone}</li>}
+          </ul>
+          {!match.instagram && !match.kakao_id && !match.phone && (
+            <p className={styles.muted}>상대가 등록한 연락처가 없어요</p>
+          )}
+          <p className={styles.muted}>{formatKST(match.executed_at)} 매칭</p>
+        </section>
+      ) : (
+        <section className={styles.card}>
+          {loading && <p className={styles.muted}>불러오는 중…</p>}
+          {!loading && roundFailed && (
+            <p className={styles.error}>일정을 불러오지 못했어요</p>
+          )}
+          {!loading && !roundFailed && !round && (
+            <>
+              <p className={styles.empty}>아직 예정된 매칭이 없어요</p>
+              <p className={styles.muted}>일정이 정해지면 여기에 표시돼요</p>
+            </>
+          )}
+          {!loading && round && (
+            <>
+              {days !== null && days >= 0 && (
+                <p className={styles.dday}>{days === 0 ? "D-DAY" : `D-${days}`}</p>
+              )}
+              <p className={styles.when}>{formatKST(round.scheduled_at)}</p>
+            </>
+          )}
+        </section>
+      )}
 
       {!loading && (
         <section className={styles.status}>

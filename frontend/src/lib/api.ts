@@ -17,6 +17,7 @@ import type {
   MatchRoundOut,
   AdminMatchRoundOut,
   MatchingRunOut,
+  MatchResultOut,
   SurveyCatalog,
 } from "./types";
 
@@ -227,6 +228,10 @@ export function markReportHandled(id: number): Promise<AdminReportOut> {
 
 export function getNextRound(): Promise<MatchRoundOut | null> {
   return apiFetch<MatchRoundOut | null>("/match-rounds/next", { method: "GET" });
+}
+
+export function getMyMatch(): Promise<MatchResultOut | null> {
+  return apiFetch<MatchResultOut | null>("/me/match", { method: "GET" });
 }
 
 export function listMatchRounds(): Promise<AdminMatchRoundOut[]> {
