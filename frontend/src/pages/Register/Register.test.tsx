@@ -30,6 +30,7 @@ async function fillFields() {
   const select = await screen.findByLabelText("학교");
   fireEvent.change(select, { target: { value: "서울대학교" } });
   fireEvent.click(screen.getByLabelText("남"));
+  fireEvent.change(screen.getByLabelText("전화번호"), { target: { value: "010-1234-5678" } });
 }
 
 describe("Register 동의 게이트", () => {
@@ -77,6 +78,21 @@ describe("Register 동의 게이트", () => {
         agreed_terms: true, agreed_privacy: true, agreed_age_14: true, gender: "male",
       }),
     ));
+  });
+
+  it("연락처를 하나도 안 채우면 제출을 막는다", async () => {
+    const spy = vi.spyOn(api, "registerUser").mockResolvedValue({} as never);
+    renderRegister();
+    fireEvent.change(screen.getByLabelText("이메일"), { target: { value: "a@b.com" } });
+    fireEvent.change(screen.getByLabelText("비밀번호 (8자 이상)"), { target: { value: "password123" } });
+    fireEvent.change(screen.getByLabelText("이름"), { target: { value: "김테스트" } });
+    const select = await screen.findByLabelText("학교");
+    fireEvent.change(select, { target: { value: "서울대학교" } });
+    fireEvent.click(screen.getByLabelText("남"));
+    fireEvent.click(screen.getByLabelText("전체 동의"));
+    fireEvent.click(screen.getByRole("button", { name: "가입하기" }));
+    expect(await screen.findByText("연락처를 최소 1개 입력하세요")).toBeInTheDocument();
+    expect(spy).not.toHaveBeenCalled();
   });
 
   it("이메일이 비면 제출을 막고 커스텀 에러를 보여준다 (noValidate 경로 검증)", async () => {

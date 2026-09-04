@@ -31,6 +31,9 @@ export interface RegisterPayload {
   agreed_terms: boolean;
   agreed_privacy: boolean;
   agreed_age_14: boolean;
+  instagram?: string | null;
+  kakao_id?: string | null;
+  phone?: string | null;
 }
 
 export interface OjakgyoCreate {

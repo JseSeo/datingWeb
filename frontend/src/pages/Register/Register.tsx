@@ -14,6 +14,9 @@ export default function Register() {
   const [name, setName] = useState("");
   const [university, setUniversity] = useState("");
   const [gender, setGender] = useState<"male" | "female" | "">("");
+  const [instagram, setInstagram] = useState("");
+  const [kakaoId, setKakaoId] = useState("");
+  const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [agreedTerms, setAgreedTerms] = useState(false);
@@ -36,6 +39,9 @@ export default function Register() {
     if (!name.trim()) return "이름을 입력하세요";
     if (!university.trim()) return "학교를 선택하세요";
     if (!gender) return "성별을 선택하세요";
+    if (!instagram.trim() && !kakaoId.trim() && !phone.trim()) {
+      return "연락처를 최소 1개 입력하세요";
+    }
     return "";
   }
 
@@ -50,6 +56,9 @@ export default function Register() {
         email, password, name: name.trim(), university: university.trim(),
         gender: gender as "male" | "female",
         agreed_terms: agreedTerms, agreed_privacy: agreedPrivacy, agreed_age_14: agreedAge,
+        instagram: instagram.trim() || null,
+        kakao_id: kakaoId.trim() || null,
+        phone: phone.trim() || null,
       });
       navigate("/login", { state: { registered: true } });
     } catch (err) {
@@ -82,6 +91,13 @@ export default function Register() {
               onChange={() => setGender("female")} /> 여
           </label>
         </fieldset>
+        <p className={styles.notice}>매칭된 상대가 연락할 수 있도록 최소 1개는 필요합니다.</p>
+        <Input id="instagram" label="인스타그램" value={instagram}
+          onChange={(e) => setInstagram(e.target.value)} />
+        <Input id="kakao" label="카카오톡 ID" value={kakaoId}
+          onChange={(e) => setKakaoId(e.target.value)} />
+        <Input id="phone" label="전화번호" value={phone}
+          onChange={(e) => setPhone(e.target.value)} />
         <fieldset className={styles.consent}>
           <label>
             <input type="checkbox" checked={allAgreed} onChange={toggleAll} />
