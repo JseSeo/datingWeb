@@ -1,12 +1,21 @@
 from fastapi.testclient import TestClient
 
+from app.models.game import Ojakgyo
+from app.models.user import User
+from tests.conftest import TestingSessionLocal
 
-def _auth(client: TestClient, email="user@test.com", name="홍길동", university="서울대학교") -> dict:
-    client.post("/auth/register", json={
+
+def _auth(client: TestClient, email="user@test.com", name="홍길동", university="서울대학교",
+          admission_year=None) -> dict:
+    body = {
         "email": email, "password": "password123",
         "name": name, "university": university, "gender": "male",
         "agreed_terms": True, "agreed_privacy": True, "agreed_age_14": True,
-    })
+        "kakao_id": "auth_kakao",
+    }
+    if admission_year is not None:
+        body["admission_year"] = admission_year
+    client.post("/auth/register", json=body)
     res = client.post("/auth/login", json={"email": email, "password": "password123"})
     return {"Authorization": f"Bearer {res.json()['access_token']}"}
 
@@ -216,6 +225,42 @@ def test_red_thread_received_counts_distinct_people(client: TestClient):
     assert res.json()["count"] == 1
 
 
+def test_red_thread_received_counts_lone_namesake_despite_year_mismatch(client: TestClient):
+    """이름+학교 후보가 나 하나뿐이면 학번을 다르게 적어도 매칭은 폴백으로 나를
+    지목한 것으로 본다 (설계 §6.3) — 여기서도 같은 수를 세야 한다."""
+    hb = _auth(client, "target3@test.com", "타깃3", "성균관대학교", admission_year=2021)
+    h1 = _auth(client, "q2@test.com")
+    body = {"targets": [
+        {"target_name": "타깃3", "target_university": "성균관대학교",
+         "target_admission_year": 2022},
+    ]}
+    client.post("/game/red-thread", json=body, headers=h1)
+    res = client.get("/game/red-thread/received", headers=hb)
+    assert res.json()["count"] == 1
+
+
+def test_red_thread_received_distinguishes_real_namesakes_by_year(client: TestClient):
+    """이름+학교가 같은 동명이인이 실제로 둘 등록되어 있으면 학번으로 진짜 갈린다 —
+    상대방 학번을 향한 실은 빠지고 내 학번을 향한 실만 세어져야 매칭과 일치한다
+    (설계 §6.3)."""
+    hb = _auth(client, "target4a@test.com", "타깃4", "성균관대학교", admission_year=2021)
+    _auth(client, "target4b@test.com", "타깃4", "성균관대학교", admission_year=2022)
+    h1 = _auth(client, "q3@test.com")
+    h2 = _auth(client, "q4@test.com")
+    other_year_body = {"targets": [
+        {"target_name": "타깃4", "target_university": "성균관대학교",
+         "target_admission_year": 2022},
+    ]}
+    my_year_body = {"targets": [
+        {"target_name": "타깃4", "target_university": "성균관대학교",
+         "target_admission_year": 2021},
+    ]}
+    client.post("/game/red-thread", json=other_year_body, headers=h1)
+    client.post("/game/red-thread", json=my_year_body, headers=h2)
+    res = client.get("/game/red-thread/received", headers=hb)
+    assert res.json()["count"] == 1
+
+
 def test_red_thread_received_zero(client: TestClient):
     headers = _auth(client, "nobody@test.com")
     res = client.get("/game/red-thread/received", headers=headers)
@@ -277,3 +322,168 @@ def test_ojakgyo_self_after_strip(client: TestClient):
         "person_b_name": "남", "person_b_university": "고려대학교",
     }, headers=headers)
     assert res.status_code == 400
+
+
+def test_ojakgyo_namesake_different_year_allowed(client: TestClient):
+    """이름+학교가 같아도 양쪽 다 학번이 있고 다르면 다른 사람 — 지목 성립 (설계 §6)."""
+    headers = _auth(client, "namesake_rec@test.com", "지목자")
+    res = client.post("/game/ojakgyo", json={
+        "person_a_name": "김철수", "person_a_university": "서울대학교",
+        "person_a_admission_year": 2021,
+        "person_b_name": "김철수", "person_b_university": "서울대학교",
+        "person_b_admission_year": 2022,
+    }, headers=headers)
+    assert res.status_code == 201
+
+
+def test_ojakgyo_namesake_same_year_forbidden(client: TestClient):
+    headers = _auth(client, "namesake_same@test.com", "지목자")
+    res = client.post("/game/ojakgyo", json={
+        "person_a_name": "김철수", "person_a_university": "서울대학교",
+        "person_a_admission_year": 2021,
+        "person_b_name": "김철수", "person_b_university": "서울대학교",
+        "person_b_admission_year": 2021,
+    }, headers=headers)
+    assert res.status_code == 400
+
+
+def test_ojakgyo_namesake_missing_year_forbidden(client: TestClient):
+    """한쪽이라도 학번이 없으면 구분할 수 없다 — 안전한 방향인 동일인 취급 (설계 §6)."""
+    headers = _auth(client, "namesake_missing@test.com", "지목자")
+    res = client.post("/game/ojakgyo", json={
+        "person_a_name": "김철수", "person_a_university": "서울대학교",
+        "person_a_admission_year": 2021,
+        "person_b_name": "김철수", "person_b_university": "서울대학교",
+    }, headers=headers)
+    assert res.status_code == 400
+
+
+def test_ojakgyo_self_different_year_allowed(client: TestClient):
+    """API 가드는 본인과 이름+학교가 같아도 학번이 다르면 "다른 사람"이라 201을
+    돌려준다 — 그게 맞다, 가드는 나중에 매칭 단계 학번 해석이 어떻게 될지 알 수
+    없다 (설계 §6). 하지만 이 케이스는 지목자가 스스로를 §6.3 폴백으로 되돌아오게
+    만들 수 있는 자리라, 실제로 오작교 집계에 반영되는지는 여기서 확인하지 않는다
+    — 그건 game_signals 레벨의
+    test_matching.test_ojakgyo_self_nomination_via_year_mismatch_is_not_counted가 본다.
+    """
+    headers = _auth(client, "self_diffyear@test.com", "동명이인", "서울대학교",
+                     admission_year=2020)
+    res = client.post("/game/ojakgyo", json={
+        "person_a_name": "동명이인", "person_a_university": "서울대학교",
+        "person_a_admission_year": 2021,
+        "person_b_name": "남", "person_b_university": "고려대학교",
+    }, headers=headers)
+    assert res.status_code == 201
+
+
+def test_ojakgyo_self_matching_year_forbidden(client: TestClient):
+    headers = _auth(client, "self_sameyear@test.com", "동명이인2", "서울대학교",
+                     admission_year=2021)
+    res = client.post("/game/ojakgyo", json={
+        "person_a_name": "동명이인2", "person_a_university": "서울대학교",
+        "person_a_admission_year": 2021,
+        "person_b_name": "남", "person_b_university": "고려대학교",
+    }, headers=headers)
+    assert res.status_code == 400
+
+
+def test_ojakgyo_self_missing_year_forbidden(client: TestClient):
+    """대상 학번이 없으면 구분할 수 없다 — 안전한 방향인 자기지목 차단 유지 (설계 §6)."""
+    headers = _auth(client, "self_noyear@test.com", "동명이인3", "서울대학교",
+                     admission_year=2021)
+    res = client.post("/game/ojakgyo", json={
+        "person_a_name": "동명이인3", "person_a_university": "서울대학교",
+        "person_b_name": "남", "person_b_university": "고려대학교",
+    }, headers=headers)
+    assert res.status_code == 400
+
+
+def test_red_thread_namesake_different_year_allowed(client: TestClient):
+    """이름+학교가 같아도 양쪽 다 학번이 있고 다르면 다른 사람 — 둘 다 저장된다 (설계 §6)."""
+    headers = _auth(client, "rt_namesake_diff@test.com")
+    res = client.post("/game/red-thread", json={"targets": [
+        {"target_name": "김철수", "target_university": "서울대학교", "target_admission_year": 2021},
+        {"target_name": "김철수", "target_university": "서울대학교", "target_admission_year": 2022},
+    ]}, headers=headers)
+    assert res.status_code == 200
+    assert len(res.json()["targets"]) == 2
+
+
+def test_red_thread_namesake_same_year_forbidden(client: TestClient):
+    headers = _auth(client, "rt_namesake_same@test.com")
+    res = client.post("/game/red-thread", json={"targets": [
+        {"target_name": "김철수", "target_university": "서울대학교", "target_admission_year": 2021},
+        {"target_name": "김철수", "target_university": "서울대학교", "target_admission_year": 2021},
+    ]}, headers=headers)
+    assert res.status_code == 400
+
+
+def test_red_thread_namesake_missing_year_forbidden(client: TestClient):
+    """한쪽이라도 학번이 없으면 구분할 수 없다 — 안전한 방향인 동일인 취급 (설계 §6)."""
+    headers = _auth(client, "rt_namesake_missing@test.com")
+    res = client.post("/game/red-thread", json={"targets": [
+        {"target_name": "김철수", "target_university": "서울대학교", "target_admission_year": 2021},
+        {"target_name": "김철수", "target_university": "서울대학교"},
+    ]}, headers=headers)
+    assert res.status_code == 400
+
+
+def test_red_thread_self_different_year_allowed(client: TestClient):
+    """본인과 이름+학교가 같아도 학번이 다르면 다른 사람 — 지목 가능 (설계 §6)."""
+    headers = _auth(client, "rt_self_diffyear@test.com", "동명이인", "서울대학교",
+                     admission_year=2020)
+    res = client.post("/game/red-thread", json={"targets": [
+        {"target_name": "동명이인", "target_university": "서울대학교", "target_admission_year": 2021},
+    ]}, headers=headers)
+    assert res.status_code == 200
+
+
+def test_red_thread_self_matching_year_forbidden(client: TestClient):
+    headers = _auth(client, "rt_self_sameyear@test.com", "동명이인2", "서울대학교",
+                     admission_year=2021)
+    res = client.post("/game/red-thread", json={"targets": [
+        {"target_name": "동명이인2", "target_university": "서울대학교", "target_admission_year": 2021},
+    ]}, headers=headers)
+    assert res.status_code == 400
+
+
+def test_red_thread_self_missing_year_forbidden(client: TestClient):
+    """대상 학번이 없으면 구분할 수 없다 — 안전한 방향인 자기지목 차단 유지 (설계 §6)."""
+    headers = _auth(client, "rt_self_noyear@test.com", "동명이인3", "서울대학교",
+                     admission_year=2021)
+    res = client.post("/game/red-thread", json={"targets": [
+        {"target_name": "동명이인3", "target_university": "서울대학교"},
+    ]}, headers=headers)
+    assert res.status_code == 400
+
+
+def test_ojakgyo_namesake_reversed_order_conflict(client: TestClient):
+    """정규화가 학번까지 비교해야 한다 (설계 §6 리뷰 지적).
+
+    (name, university)만으로 정렬하면 학번만 다른 동명이인 쌍은 제출 순서를 그대로
+    유지해 (A, B)와 (B, A)가 서로 다른 정규화 결과로 남고, 같은 지목이 두 번 저장된다.
+    """
+    headers = _auth(client, "namesake_reorder@test.com", "지목자")
+    body1 = {
+        "person_a_name": "김철수", "person_a_university": "서울대학교",
+        "person_a_admission_year": 2021,
+        "person_b_name": "김철수", "person_b_university": "서울대학교",
+        "person_b_admission_year": 2022,
+    }
+    assert client.post("/game/ojakgyo", json=body1, headers=headers).status_code == 201
+
+    # 같은 두 사람, person_a/person_b 순서만 뒤집어 재지목
+    body2 = {
+        "person_a_name": "김철수", "person_a_university": "서울대학교",
+        "person_a_admission_year": 2022,
+        "person_b_name": "김철수", "person_b_university": "서울대학교",
+        "person_b_admission_year": 2021,
+    }
+    res = client.post("/game/ojakgyo", json=body2, headers=headers)
+    assert res.status_code == 409
+
+    db = TestingSessionLocal()
+    recommender = db.query(User).filter(User.email == "namesake_reorder@test.com").first()
+    count = db.query(Ojakgyo).filter(Ojakgyo.recommender_id == recommender.id).count()
+    db.close()
+    assert count == 1

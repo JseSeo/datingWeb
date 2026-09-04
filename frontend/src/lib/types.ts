@@ -31,6 +31,10 @@ export interface RegisterPayload {
   agreed_terms: boolean;
   agreed_privacy: boolean;
   agreed_age_14: boolean;
+  instagram?: string | null;
+  kakao_id?: string | null;
+  phone?: string | null;
+  admission_year?: number | null;
 }
 
 export interface OjakgyoCreate {
@@ -38,6 +42,8 @@ export interface OjakgyoCreate {
   person_a_university: string;
   person_b_name: string;
   person_b_university: string;
+  person_a_admission_year?: number | null;
+  person_b_admission_year?: number | null;
 }
 
 export interface OjakgyoOut extends OjakgyoCreate {
@@ -49,6 +55,7 @@ export interface OjakgyoOut extends OjakgyoCreate {
 export interface RedThreadTarget {
   target_name: string;
   target_university: string;
+  target_admission_year?: number | null;
 }
 
 export interface RedThreadOut {
@@ -152,6 +159,12 @@ export interface UniversityWeightIn {
   bonus: number;
   active: boolean;
   note: string | null;
+}
+
+export interface UniversityOut {
+  id: number;
+  name: string;
+  active: boolean;
 }
 
 export interface MatchResultOut {

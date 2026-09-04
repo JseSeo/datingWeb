@@ -5,6 +5,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.game import Ojakgyo, RedThread
@@ -79,8 +80,24 @@ def pair_key(a: int, b: int) -> tuple[int, int]:
     return (a, b) if a < b else (b, a)
 
 
+def _has_contact():
+    """연락처 1개 이상 (설계 §7.2). 빈 문자열·공백만 있는 값도 없는 것으로 본다 —
+    스키마는 None으로 정규화하지만 과거 데이터나 DB 직접 수정이 남길 수 있다.
+
+    문자 집합을 명시해야 한다 — 인자 없는 SQL TRIM은 스페이스만 지운다
+    (SQLite·PostgreSQL 공통). 지정 없이 쓰면 탭·개행만 있는 값이 스키마에서는
+    없는 것으로 보이는데 여기서는 있는 것으로 남아 세 층위 판정이 갈라진다.
+    """
+    return or_(
+        *[
+            and_(column.isnot(None), func.trim(column, " \t\r\n") != "")
+            for column in (User.instagram, User.kakao_id, User.phone)
+        ]
+    )
+
+
 def eligible_users(db: Session) -> list[User]:
-    """매칭 자격: active + 일시정지 OFF + 설문 행 존재 (설계 §6.2).
+    """매칭 자격: active + 일시정지 OFF + 설문 행 존재 + 연락처 1개 이상 (설계 §6.2).
 
     응답 개수는 따지지 않는다 — 부분 응답도 풀에 넣는다.
     """
@@ -91,6 +108,7 @@ def eligible_users(db: Session) -> list[User]:
         .filter(
             User.status == UserStatus.active,
             User.matching_paused.is_(False),
+            _has_contact(),
         )
         .order_by(User.id)
         .all()
@@ -116,22 +134,40 @@ OJAKGYO_GUARANTEE_COUNT = 3
 
 
 def _identity_resolver(db: Session):
-    """이름+학교가 유일할 때만 유저를 특정한다 (설계 §4.4).
+    """이름+학교로 후보를 찾고 학번으로 좁힌다 (설계 §6).
 
-    학번(admission_year)은 아직 없다 — 도입 전까지 이름+학교로만 판정하되
-    '유일할 때만 적용' 규칙은 그대로 지킨다. 2명 이상이면 무시(None).
+    학번은 후보를 좁히는 추가 필터일 뿐이다. 학번 미등록 유저를 후보에서 빼지 않는다 —
+    그러면 대상이 학번을 안 넣었다는 이유만으로 지목이 조용히 사라진다.
     """
-    index: dict[tuple[str, str], list[int]] = defaultdict(list)
-    for user_id, name, university in db.query(
-        User.id, User.name, User.university
+    index: dict[tuple[str, str], list[tuple[int, int | None]]] = defaultdict(list)
+    for user_id, name, university, admission_year in db.query(
+        User.id, User.name, User.university, User.admission_year
     ).all():
-        index[(name.strip(), university.strip())].append(user_id)
+        index[(name.strip(), university.strip())].append((user_id, admission_year))
 
-    def resolve(name: str, university: str) -> int | None:
+    def resolve(name: str, university: str, admission_year: int = 0) -> int | None:
         hits = index.get((name.strip(), university.strip()), [])
-        return hits[0] if len(hits) == 1 else None
+        if admission_year:
+            narrowed = [hit for hit in hits if hit[1] == admission_year]
+            if len(narrowed) == 1:
+                return narrowed[0][0]
+            # 0명이거나 2명 이상이면 학번으로 못 좁힌다 — 이름+학교 결과로 폴백 (설계 §6.3)
+        return hits[0][0] if len(hits) == 1 else None
 
     return resolve
+
+
+def get_identity_resolver(db: Session):
+    """`_identity_resolver`의 공개 창구.
+
+    매칭 파이프라인 밖(API 계층)에서도 "이름+학교+학번이 어느 유저를 가리키는가"를
+    매칭과 똑같은 규칙(학번 불일치 시 이름+학교 단일후보 폴백, 설계 §6.3)으로 판정해야
+    할 때가 있다 — 예: 붉은실 수신함 집계가 매칭 결과와 수가 어긋나면 안 된다. 그렇다고
+    API가 밑줄 붙은 내부 함수를 직접 넘어가 부르게 하면 매칭 모듈의 캡슐화가 깨지므로,
+    동작은 그대로 두고 이 이름으로만 내보낸다. 반환된 resolver는 유저 전체를 인덱싱해
+    만들어지므로 요청당 한 번만 만들어 재사용해야 한다(행마다 새로 만들면 안 됨).
+    """
+    return _identity_resolver(db)
 
 
 def game_signals(
@@ -150,10 +186,16 @@ def game_signals(
 
     targets: dict[int, set[int]] = defaultdict(set)
     for thread in db.query(RedThread).all():
-        target_id = resolve(thread.target_name, thread.target_university)
+        target_id = resolve(
+            thread.target_name, thread.target_university, thread.target_admission_year
+        )
         if target_id is not None:
             targets[thread.user_id].add(target_id)
 
+    # 붉은실은 제출자 자신이 페어의 한쪽이라 자기지목 우회 구조가 아니다 — 대상이
+    # 학번만 다르게 적은 자신으로 풀려도 usable()의 성별 비교(자기 자신과는 항상
+    # 같음)가 이미 걸러낸다. 오작교처럼 "제3자가 지목한 두 사람" 구조가 아니므로
+    # 지목자 자신을 별도로 걸러낼 지점이 없다.
     red: set[tuple[int, int]] = set()
     for user_id, target_ids in targets.items():
         for target_id in target_ids:
@@ -162,10 +204,19 @@ def game_signals(
 
     counts: Counter[tuple[int, int]] = Counter()
     for entry in db.query(Ojakgyo).all():
-        a = resolve(entry.person_a_name, entry.person_a_university)
-        b = resolve(entry.person_b_name, entry.person_b_university)
+        a = resolve(
+            entry.person_a_name, entry.person_a_university, entry.person_a_admission_year
+        )
+        b = resolve(
+            entry.person_b_name, entry.person_b_university, entry.person_b_admission_year
+        )
         # 같은 지목자가 같은 쌍을 두 번 넣는 건 DB 유니크 제약이 이미 막는다
         if a is None or b is None or a == b or not usable(a, b):
+            continue
+        # 지목자가 자기 학번만 다르게 적어 §6.3 폴백(후보 1명이면 학번 무시하고
+        # 확정)으로 스스로에게 되돌아오는 경우 — API 단계에선 학번이 다르면
+        # "다른 사람"이라 판단해 막을 수 없으므로 투표가 집계되는 여기서 막는다
+        if entry.recommender_id in (a, b):
             continue
         counts[pair_key(a, b)] += 1
 

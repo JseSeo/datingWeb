@@ -9,6 +9,14 @@ beforeEach(() => {
   vi.spyOn(api, "listReports").mockResolvedValue([]);
   vi.spyOn(api, "listMatchRounds").mockResolvedValue([]);
   vi.spyOn(api, "listUniversityWeights").mockResolvedValue([]);
+  // 대학 가중치 탭의 학교 셀렉트가 마운트 시 호출하는 목록 API stub
+  vi.spyOn(api, "listUniversities").mockResolvedValue([
+    { id: 1, name: "서울대학교", active: true },
+  ]);
+  // 대학 목록 탭이 마운트 시 호출하는 전체 목록 API stub
+  vi.spyOn(api, "listAllUniversities").mockResolvedValue([
+    { id: 1, name: "서울대학교", active: true },
+  ]);
 });
 
 describe("Admin", () => {
@@ -74,10 +82,10 @@ describe("Admin", () => {
     expect(screen.getByText("등록된 규칙 없음")).toBeInTheDocument();
   });
 
-  it("탭 4개 중 선택된 하나만 aria-selected=true", async () => {
+  it("탭 5개 중 선택된 하나만 aria-selected=true", async () => {
     render(<Admin />);
     const round = screen.getByRole("tab", { name: "라운드" });
-    expect(screen.getAllByRole("tab")).toHaveLength(4);
+    expect(screen.getAllByRole("tab")).toHaveLength(5);
     expect(round).toHaveAttribute("aria-selected", "false");
 
     fireEvent.click(round);

@@ -37,6 +37,7 @@ def _register_normal_user(client: TestClient) -> dict:
         "agreed_terms": True,
         "agreed_privacy": True,
         "agreed_age_14": True,
+        "kakao_id": "normal_kakao",
     })
     res = client.post("/auth/login", json={
         "email": "normal@test.com",

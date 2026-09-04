@@ -3,6 +3,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.api.universities import validate_universities
 from app.core.security import create_token, hash_password, verify_password
 from app.database import get_db
 from app.models.user import User, UserStatus
@@ -25,13 +26,18 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="필수 약관에 동의해야 가입할 수 있습니다",
         )
+    validate_universities(db, payload.university)
     user = User(
         email=payload.email,
         password_hash=hash_password(payload.password),
         name=payload.name,
         university=payload.university,
+        admission_year=payload.admission_year,
         gender=payload.gender,
         terms_agreed_at=datetime.utcnow(),
+        instagram=payload.instagram,
+        kakao_id=payload.kakao_id,
+        phone=payload.phone,
     )
     db.add(user)
     db.commit()

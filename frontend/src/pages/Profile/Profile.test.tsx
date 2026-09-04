@@ -41,6 +41,19 @@ describe("Profile", () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
+  it("공백만 입력한 연락처는 없는 것으로 보고 저장을 막는다", async () => {
+    const spy = vi.spyOn(api, "updateProfile");
+    renderProfile();
+    fireEvent.change(screen.getByLabelText("인스타그램"), {
+      target: { value: "   " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    await waitFor(() =>
+      expect(screen.getByText("연락처를 1개 이상 입력하세요")).toBeInTheDocument(),
+    );
+    expect(spy).not.toHaveBeenCalled();
+  });
+
   it("연락처 1개 있으면 저장 호출", async () => {
     const spy = vi.spyOn(api, "updateProfile").mockResolvedValue(user);
     renderProfile();
@@ -49,5 +62,20 @@ describe("Profile", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
     await waitFor(() => expect(spy).toHaveBeenCalled());
+  });
+
+  it("마지막 연락처 삭제 시도가 서버에서 거부되면 서버 메시지를 그대로 보여준다", async () => {
+    vi.spyOn(api, "updateProfile").mockRejectedValue(
+      new api.ApiError(422, "연락처는 최소 1개를 남겨야 합니다"),
+    );
+    renderProfile();
+    // 클라이언트 사전 체크를 통과시키기 위해 1개는 채우되, 서버가 병합 결과로 거부하는 상황을 가정한다
+    fireEvent.change(screen.getByLabelText("인스타그램"), {
+      target: { value: "myig" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    expect(
+      await screen.findByText("연락처는 최소 1개를 남겨야 합니다"),
+    ).toBeInTheDocument();
   });
 });

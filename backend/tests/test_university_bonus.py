@@ -122,7 +122,7 @@ def test_penalized_pair_still_matches(setup_db):
     ):
         user = User(
             email=email, password_hash="x", name="테스트", university=SNU,
-            gender=gender, status=UserStatus.active,
+            gender=gender, status=UserStatus.active, kakao_id="kakao_default",
         )
         db.add(user)
         db.commit()

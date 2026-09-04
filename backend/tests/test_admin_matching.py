@@ -15,7 +15,7 @@ def _seed_pool_and_round() -> int:
     for email, gender in (("m@test.com", Gender.male), ("w@test.com", Gender.female)):
         user = User(
             email=email, password_hash="x", name="테스트", university="서울대학교",
-            gender=gender, status=UserStatus.active,
+            gender=gender, status=UserStatus.active, kakao_id="kakao_default",
         )
         db.add(user)
         db.commit()
@@ -65,6 +65,7 @@ def test_normal_user_is_forbidden(client: TestClient):
         "email": "normal@test.com", "password": "password123", "name": "김일반",
         "university": "서울대학교", "gender": "male",
         "agreed_terms": True, "agreed_privacy": True, "agreed_age_14": True,
+        "kakao_id": "normal_kakao",
     })
     token = client.post("/auth/login", json={
         "email": "normal@test.com", "password": "password123",

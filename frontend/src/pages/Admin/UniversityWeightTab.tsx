@@ -8,6 +8,7 @@ import {
   deleteUniversityWeight,
 } from "../../lib/api";
 import type { UniversityWeightOut } from "../../lib/types";
+import { UniversitySelect } from "../../components/UniversitySelect/UniversitySelect";
 import { Button } from "../../components/Button/Button";
 import styles from "./Admin.module.css";
 
@@ -107,15 +108,11 @@ export default function UniversityWeightTab() {
 
   return (
     <div className={styles.wrap}>
-      <form className={styles.formRow} onSubmit={handleCreate}>
-        <label className={styles.formLabel} htmlFor="weight-a">
-          대학 A
-          <input id="weight-a" value={uniA} onChange={(e) => setUniA(e.target.value)} />
-        </label>
-        <label className={styles.formLabel} htmlFor="weight-b">
-          대학 B (비우면 단일 대학 규칙)
-          <input id="weight-b" value={uniB} onChange={(e) => setUniB(e.target.value)} />
-        </label>
+      <form className={styles.formRow} onSubmit={handleCreate} noValidate>
+        <UniversitySelect id="weight-a" label="대학 A" value={uniA}
+          onChange={setUniA} required />
+        <UniversitySelect id="weight-b" label="대학 B" value={uniB}
+          onChange={setUniB} allowEmpty emptyLabel="없음 (단일 대학 규칙)" />
         <label className={styles.formLabel} htmlFor="weight-bonus">
           보너스 (음수는 페널티, 합계 ±50까지만 적용)
           <input

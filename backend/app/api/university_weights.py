@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.api.universities import validate_universities
 from app.core.deps import require_admin
 from app.database import get_db
 from app.models.match import MatchingUniversityWeight
@@ -72,6 +73,8 @@ def create_weight(
     _: User = Depends(require_admin),
 ):
     university_a, university_b = _normalized(payload)
+    # 빈 university_b는 단일 대학 규칙 관례다 — 검증 대상이 아니다 (설계 §5.2)
+    validate_universities(db, *[n for n in (university_a, university_b) if n])
     weight = MatchingUniversityWeight(
         university_a=university_a,
         university_b=university_b,
@@ -93,7 +96,10 @@ def update_weight(
     _: User = Depends(require_admin),
 ):
     weight = _get_weight(db, weight_id)
-    weight.university_a, weight.university_b = _normalized(payload)
+    university_a, university_b = _normalized(payload)
+    # 빈 university_b는 단일 대학 규칙 관례다 — 검증 대상이 아니다 (설계 §5.2)
+    validate_universities(db, *[n for n in (university_a, university_b) if n])
+    weight.university_a, weight.university_b = university_a, university_b
     weight.bonus = payload.bonus
     weight.active = payload.active
     weight.note = payload.note

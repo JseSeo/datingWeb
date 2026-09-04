@@ -6,14 +6,17 @@ import {
   ApiError,
 } from "../../lib/api";
 import { Input } from "../../components/Input/Input";
+import { UniversitySelect } from "../../components/UniversitySelect/UniversitySelect";
 import { Button } from "../../components/Button/Button";
 import styles from "./Game.module.css";
 
 export default function RedThreadTab() {
   const [name1, setName1] = useState("");
   const [univ1, setUniv1] = useState("");
+  const [year1, setYear1] = useState("");
   const [name2, setName2] = useState("");
   const [univ2, setUniv2] = useState("");
+  const [year2, setYear2] = useState("");
   const [received, setReceived] = useState(0);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -23,8 +26,16 @@ export default function RedThreadTab() {
     Promise.all([getRedThread(), getRedThreadReceived()])
       .then(([thread, recv]) => {
         const [t1, t2] = thread.targets;
-        if (t1) { setName1(t1.target_name); setUniv1(t1.target_university); }
-        if (t2) { setName2(t2.target_name); setUniv2(t2.target_university); }
+        if (t1) {
+          setName1(t1.target_name);
+          setUniv1(t1.target_university);
+          setYear1(t1.target_admission_year ? String(t1.target_admission_year) : "");
+        }
+        if (t2) {
+          setName2(t2.target_name);
+          setUniv2(t2.target_university);
+          setYear2(t2.target_admission_year ? String(t2.target_admission_year) : "");
+        }
         setReceived(recv.count);
       })
       .catch(() => {
@@ -33,12 +44,20 @@ export default function RedThreadTab() {
   }, []);
 
   function buildTargets() {
-    const out: { target_name: string; target_university: string }[] = [];
+    const out: { target_name: string; target_university: string; target_admission_year: number | null }[] = [];
     if (name1.trim() && univ1.trim()) {
-      out.push({ target_name: name1.trim(), target_university: univ1.trim() });
+      out.push({
+        target_name: name1.trim(),
+        target_university: univ1.trim(),
+        target_admission_year: Number(year1) || null,
+      });
     }
     if (name2.trim() && univ2.trim()) {
-      out.push({ target_name: name2.trim(), target_university: univ2.trim() });
+      out.push({
+        target_name: name2.trim(),
+        target_university: univ2.trim(),
+        target_admission_year: Number(year2) || null,
+      });
     }
     return out;
   }
@@ -62,8 +81,10 @@ export default function RedThreadTab() {
       const [t1, t2] = result.targets;
       setName1(t1?.target_name ?? "");
       setUniv1(t1?.target_university ?? "");
+      setYear1(t1?.target_admission_year ? String(t1.target_admission_year) : "");
       setName2(t2?.target_name ?? "");
       setUniv2(t2?.target_university ?? "");
+      setYear2(t2?.target_admission_year ? String(t2.target_admission_year) : "");
       setMessage("저장됐어요");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "저장에 실패했습니다");
@@ -82,12 +103,17 @@ export default function RedThreadTab() {
       <p className={styles.hint}>마음에 둔 상대를 최대 2명까지 적어주세요. (최소 1명)</p>
       <Input id="rt-name1" label="상대1 이름" value={name1}
         onChange={(e) => setName1(e.target.value)} />
-      <Input id="rt-univ1" label="상대1 학교" value={univ1}
-        onChange={(e) => setUniv1(e.target.value)} />
+      <UniversitySelect id="rt-univ1" label="상대1 학교" value={univ1}
+        onChange={setUniv1} />
+      <Input id="rt-year1" label="상대1 학번" type="number" value={year1}
+        onChange={(e) => setYear1(e.target.value)} />
       <Input id="rt-name2" label="상대2 이름" value={name2}
         onChange={(e) => setName2(e.target.value)} />
-      <Input id="rt-univ2" label="상대2 학교" value={univ2}
-        onChange={(e) => setUniv2(e.target.value)} />
+      <UniversitySelect id="rt-univ2" label="상대2 학교" value={univ2}
+        onChange={setUniv2} />
+      <Input id="rt-year2" label="상대2 학번" type="number" value={year2}
+        onChange={(e) => setYear2(e.target.value)} />
+      <p className={styles.hint}>선택 입력. 동명이인이 있으면 학번 없이는 지목이 반영되지 않을 수 있습니다.</p>
       {error && <p className={styles.error}>{error}</p>}
       {message && <p className={styles.success}>{message}</p>}
       <Button type="submit" disabled={submitting || !canSubmit}>

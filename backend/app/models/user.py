@@ -36,6 +36,8 @@ class User(Base):
     instagram: Mapped[str | None] = mapped_column(String(100), nullable=True)
     kakao_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # 입학년도 4자리. 선택 입력 — 상대 학번을 모를 수 있어 필수로 두지 않는다 (설계 §4.2)
+    admission_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     matching_paused: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     # 이월 보너스 계산용. 매칭 실행 시 매칭된 사람은 0, 안 된 사람은 +1 (설계 §4.1)
     missed_rounds: Mapped[int] = mapped_column(

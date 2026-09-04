@@ -3,7 +3,13 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import RedThreadTab from "./RedThreadTab";
 import * as api from "../../lib/api";
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.spyOn(api, "listUniversities").mockResolvedValue([
+    { id: 1, name: "서울대학교", active: true },
+    { id: 2, name: "연세대학교", active: true },
+  ]);
+});
 
 function mockLoad(targets: { target_name: string; target_university: string }[], count: number) {
   vi.spyOn(api, "getRedThread").mockResolvedValue({ targets });
@@ -32,7 +38,7 @@ describe("RedThreadTab", () => {
     mockLoad([], 0);
     const spy = vi.spyOn(api, "postRedThread");
     render(<RedThreadTab />);
-    await waitFor(() => screen.getByLabelText("상대1 이름"));
+    await screen.findByRole("combobox", { name: "상대1 학교" });
     fireEvent.change(screen.getByLabelText("상대1 이름"), { target: { value: "이영희" } });
     fireEvent.change(screen.getByLabelText("상대1 학교"), { target: { value: "연세대학교" } });
     fireEvent.change(screen.getByLabelText("상대2 이름"), { target: { value: "이영희" } });
@@ -44,13 +50,36 @@ describe("RedThreadTab", () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
+  it("학번 없이도 저장할 수 있다", async () => {
+    mockLoad([], 0);
+    const spy = vi.spyOn(api, "postRedThread").mockResolvedValue({
+      targets: [{ target_name: "이영희", target_university: "연세대학교" }],
+    });
+    render(<RedThreadTab />);
+    await screen.findByRole("combobox", { name: "상대1 학교" });
+    fireEvent.change(screen.getByLabelText("상대1 이름"), { target: { value: "이영희" } });
+    fireEvent.change(screen.getByLabelText("상대1 학교"), { target: { value: "연세대학교" } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    await waitFor(() =>
+      expect(spy).toHaveBeenCalledWith([
+        expect.objectContaining({ target_admission_year: null }),
+      ]),
+    );
+  });
+
+  it("동명이인 안내를 보여준다", async () => {
+    mockLoad([], 0);
+    render(<RedThreadTab />);
+    expect(await screen.findByText(/동명이인이 있으면/)).toBeInTheDocument();
+  });
+
   it("저장 성공 시 메시지 표시", async () => {
     mockLoad([], 0);
     vi.spyOn(api, "postRedThread").mockResolvedValue({
       targets: [{ target_name: "이영희", target_university: "연세대학교" }],
     });
     render(<RedThreadTab />);
-    await waitFor(() => screen.getByLabelText("상대1 이름"));
+    await screen.findByRole("combobox", { name: "상대1 학교" });
     fireEvent.change(screen.getByLabelText("상대1 이름"), { target: { value: "이영희" } });
     fireEvent.change(screen.getByLabelText("상대1 학교"), { target: { value: "연세대학교" } });
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
