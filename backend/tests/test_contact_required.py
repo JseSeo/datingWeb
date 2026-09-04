@@ -47,3 +47,51 @@ def test_register_strips_contact_before_storing(client: TestClient):
     }).json()["access_token"]
     me = client.get("/me", headers={"Authorization": f"Bearer {token}"}).json()
     assert me["kakao_id"] == "drop_kakao"
+
+
+def _login(client: TestClient, email: str) -> dict:
+    token = client.post("/auth/login", json={
+        "email": email, "password": "password123",
+    }).json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_cannot_clear_last_contact(client: TestClient):
+    _register(client, "last@test.com", kakao_id="only_one")
+    headers = _login(client, "last@test.com")
+    res = client.put("/me/profile", json={"kakao_id": ""}, headers=headers)
+    assert res.status_code == 422
+
+
+def test_can_clear_one_of_two_contacts(client: TestClient):
+    _register(client, "two@test.com", kakao_id="a", instagram="b")
+    headers = _login(client, "two@test.com")
+    res = client.put("/me/profile", json={"kakao_id": ""}, headers=headers)
+    assert res.status_code == 200
+    assert res.json()["kakao_id"] is None
+    assert res.json()["instagram"] == "b"
+
+
+def test_rejected_clear_does_not_touch_db(client: TestClient):
+    """422를 받은 뒤에도 기존 연락처가 살아 있어야 한다 (설계 §7.1)."""
+    _register(client, "intact@test.com", kakao_id="keep_me")
+    headers = _login(client, "intact@test.com")
+    client.put("/me/profile", json={"kakao_id": ""}, headers=headers)
+    assert client.get("/me", headers=headers).json()["kakao_id"] == "keep_me"
+
+
+def test_bio_only_update_still_works(client: TestClient):
+    """연락처를 건드리지 않는 수정은 영향받지 않는다."""
+    _register(client, "bio@test.com", kakao_id="x")
+    headers = _login(client, "bio@test.com")
+    res = client.put("/me/profile", json={"bio": "안녕하세요"}, headers=headers)
+    assert res.status_code == 200
+
+
+def test_cannot_clear_last_contact_with_whitespace(client: TestClient):
+    """공백만 있는 값도 빈 값과 같아야 한다 — 마지막 연락처를 우회로 지울 수 없다."""
+    _register(client, "wslast@test.com", kakao_id="keep_me")
+    headers = _login(client, "wslast@test.com")
+    res = client.put("/me/profile", json={"kakao_id": "   "}, headers=headers)
+    assert res.status_code == 422
+    assert client.get("/me", headers=headers).json()["kakao_id"] == "keep_me"

@@ -159,13 +159,28 @@ def withdraw(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
+_CONTACT_FIELDS = ("instagram", "kakao_id", "phone")
+
+
 @router.put("/profile", response_model=UserOut)
 def update_profile(
     payload: ProfileUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    changes = payload.model_dump(exclude_unset=True)
+    # 부분 업데이트라 payload가 아니라 "반영 후 상태"로 판정해야 한다 (설계 §7.1).
+    # setattr 전에 계산해서 거부된 요청이 DB에 닿지 않게 한다
+    merged = {
+        field: changes.get(field, getattr(current_user, field))
+        for field in _CONTACT_FIELDS
+    }
+    if not any(merged.values()):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="연락처는 최소 1개를 남겨야 합니다",
+        )
+    for field, value in changes.items():
         setattr(current_user, field, value)
     db.commit()
     db.refresh(current_user)
