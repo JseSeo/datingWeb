@@ -1,6 +1,8 @@
 from typing import Literal
 from pydantic import BaseModel, EmailStr, field_validator, model_validator
 
+from app.schemas.admission import check_admission_year
+
 
 class RegisterRequest(BaseModel):
     email: EmailStr
@@ -14,6 +16,12 @@ class RegisterRequest(BaseModel):
     instagram: str | None = None
     kakao_id: str | None = None
     phone: str | None = None
+    admission_year: int | None = None
+
+    @field_validator("admission_year")
+    @classmethod
+    def valid_admission_year(cls, v: int | None) -> int | None:
+        return check_admission_year(v)
 
     @field_validator("password")
     @classmethod

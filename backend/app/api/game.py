@@ -18,11 +18,11 @@ from app.schemas.game import (
 router = APIRouter(prefix="/game", tags=["game"])
 
 
-def _normalize_pair(a_name, a_univ, b_name, b_univ):
+def _normalize_pair(a_name, a_univ, a_year, b_name, b_univ, b_year):
     """두 사람을 순서무관하게 정규화 — (name, university) 튜플 비교로 항상 같은 순서 보장."""
-    a = (a_name, a_univ)
-    b = (b_name, b_univ)
-    return (a, b) if a <= b else (b, a)
+    a = (a_name, a_univ, a_year)
+    b = (b_name, b_univ, b_year)
+    return (a, b) if a[:2] <= b[:2] else (b, a)
 
 
 @router.post("/ojakgyo", response_model=OjakgyoOut, status_code=201)
@@ -50,14 +50,19 @@ def create_ojakgyo(
             detail="서로 다른 두 사람을 지목해야 합니다",
         )
 
-    pa, pb = _normalize_pair(*a, *b)
+    # 미입력(None)은 0으로 저장한다 — 유니크 제약에 NULL을 넣지 않기 위해서다 (설계 §4.2)
+    a_year = payload.person_a_admission_year or 0
+    b_year = payload.person_b_admission_year or 0
+    pa, pb = _normalize_pair(*a, a_year, *b, b_year)
     validate_universities(db, pa[1], pb[1])
     existing = db.query(Ojakgyo).filter(
         Ojakgyo.recommender_id == current_user.id,
         Ojakgyo.person_a_name == pa[0],
         Ojakgyo.person_a_university == pa[1],
+        Ojakgyo.person_a_admission_year == pa[2],
         Ojakgyo.person_b_name == pb[0],
         Ojakgyo.person_b_university == pb[1],
+        Ojakgyo.person_b_admission_year == pb[2],
     ).first()
     if existing:
         raise HTTPException(
@@ -67,8 +72,8 @@ def create_ojakgyo(
 
     ojakgyo = Ojakgyo(
         recommender_id=current_user.id,
-        person_a_name=pa[0], person_a_university=pa[1],
-        person_b_name=pb[0], person_b_university=pb[1],
+        person_a_name=pa[0], person_a_university=pa[1], person_a_admission_year=pa[2],
+        person_b_name=pb[0], person_b_university=pb[1], person_b_admission_year=pb[2],
     )
     db.add(ojakgyo)
     db.commit()
@@ -84,11 +89,13 @@ def submit_red_thread(
 ):
     validate_universities(db, *[t.target_university.strip() for t in payload.targets])
     me = (current_user.name.strip(), current_user.university.strip())
-    cleaned: list[tuple[str, str]] = []
+    cleaned: list[tuple[str, str, int]] = []
     seen: set[tuple[str, str]] = set()
     for t in payload.targets:
         name = t.target_name.strip()
         univ = t.target_university.strip()
+        # 미입력(None)은 0으로 저장한다 — 유니크 제약에 NULL을 넣지 않기 위해서다 (설계 §4.2)
+        year = t.target_admission_year or 0
         if not name or not univ:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -105,17 +112,19 @@ def submit_red_thread(
                 detail="같은 상대를 두 번 입력할 수 없습니다",
             )
         seen.add((name, univ))
-        cleaned.append((name, univ))
+        cleaned.append((name, univ, year))
 
     # 목록 통째 교체: 기존 전부 삭제 후 재삽입
     db.query(RedThread).filter(RedThread.user_id == current_user.id).delete()
     db.add_all([
-        RedThread(user_id=current_user.id, target_name=n, target_university=u)
-        for n, u in cleaned
+        RedThread(user_id=current_user.id, target_name=n, target_university=u,
+                   target_admission_year=y)
+        for n, u, y in cleaned
     ])
     db.commit()
     return RedThreadOut(targets=[
-        RedThreadTargetOut(target_name=n, target_university=u) for n, u in cleaned
+        RedThreadTargetOut(target_name=n, target_university=u, target_admission_year=y)
+        for n, u, y in cleaned
     ])
 
 

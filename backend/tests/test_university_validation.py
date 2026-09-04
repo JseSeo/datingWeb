@@ -81,6 +81,28 @@ def test_weight_rejects_unlisted_university_b(admin_client: TestClient):
     assert res.status_code == 422
 
 
+def test_register_rejects_year_below_range(client: TestClient):
+    res = client.post("/auth/register", json={
+        "email": "y1@test.com", "password": "password123", "name": "학번",
+        "university": "서울대학교", "gender": "male", "kakao_id": "k",
+        "admission_year": 1999,
+        "agreed_terms": True, "agreed_privacy": True, "agreed_age_14": True,
+    })
+    assert res.status_code == 422
+
+
+def test_register_accepts_next_year(client: TestClient):
+    """입학 전 학기 가입을 허용한다 (설계 §4.2)."""
+    from datetime import datetime
+    res = client.post("/auth/register", json={
+        "email": "y2@test.com", "password": "password123", "name": "학번",
+        "university": "서울대학교", "gender": "male", "kakao_id": "k",
+        "admission_year": datetime.utcnow().year + 1,
+        "agreed_terms": True, "agreed_privacy": True, "agreed_age_14": True,
+    })
+    assert res.status_code == 201
+
+
 def test_weight_update_rejects_unlisted_university(admin_client: TestClient):
     created = admin_client.post("/admin/university-weights", json={
         "university_a": "서울대학교", "university_b": "", "bonus": 10,

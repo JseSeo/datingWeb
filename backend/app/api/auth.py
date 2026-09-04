@@ -32,6 +32,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
         password_hash=hash_password(payload.password),
         name=payload.name,
         university=payload.university,
+        admission_year=payload.admission_year,
         gender=payload.gender,
         terms_agreed_at=datetime.utcnow(),
         instagram=payload.instagram,
