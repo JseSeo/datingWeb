@@ -1,5 +1,5 @@
 from typing import Literal
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, field_validator, model_validator
 
 
 class RegisterRequest(BaseModel):
@@ -11,6 +11,9 @@ class RegisterRequest(BaseModel):
     agreed_terms: bool
     agreed_privacy: bool
     agreed_age_14: bool
+    instagram: str | None = None
+    kakao_id: str | None = None
+    phone: str | None = None
 
     @field_validator("password")
     @classmethod
@@ -25,6 +28,18 @@ class RegisterRequest(BaseModel):
         if not v.strip():
             raise ValueError("빈 값은 허용되지 않습니다")
         return v.strip()
+
+    @field_validator("instagram", "kakao_id", "phone", mode="before")
+    @classmethod
+    def empty_string_to_none(cls, v: str | None) -> str | None:
+        return None if v == "" else v
+
+    @model_validator(mode="after")
+    def at_least_one_contact(self):
+        """연락처가 없으면 매칭돼도 서로 닿을 방법이 없다 (설계 §7.1)."""
+        if not (self.instagram or self.kakao_id or self.phone):
+            raise ValueError("연락처를 최소 1개 입력하세요")
+        return self
 
 
 class LoginRequest(BaseModel):

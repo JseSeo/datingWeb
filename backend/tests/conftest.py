@@ -63,6 +63,7 @@ def admin_client(client: TestClient):
         "agreed_terms": True,
         "agreed_privacy": True,
         "agreed_age_14": True,
+        "kakao_id": "admin_kakao",
     })
     db = TestingSessionLocal()
     from app.models.user import User

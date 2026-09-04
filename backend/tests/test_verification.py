@@ -18,6 +18,7 @@ def _register_and_get_headers(client: TestClient, email: str) -> dict:
         "agreed_terms": True,
         "agreed_privacy": True,
         "agreed_age_14": True,
+        "kakao_id": "register_kakao",
     })
     res = client.post("/auth/login", json={"email": email, "password": "password123"})
     return {"Authorization": f"Bearer {res.json()['access_token']}"}
@@ -65,6 +66,7 @@ def test_admin_list_verifications(admin_client: TestClient):
         "agreed_terms": True,
         "agreed_privacy": True,
         "agreed_age_14": True,
+        "kakao_id": "student_kakao",
     })
     res = admin_client.post("/auth/login", json={
         "email": "student@test.com", "password": "password123"
@@ -94,6 +96,7 @@ def test_admin_list_includes_name_and_university(admin_client: TestClient):
         "agreed_terms": True,
         "agreed_privacy": True,
         "agreed_age_14": True,
+        "kakao_id": "namestudent_kakao",
     })
     res = admin_client.post("/auth/login", json={
         "email": "namestudent@test.com", "password": "password123"
@@ -121,6 +124,7 @@ def test_admin_approve_verification(admin_client: TestClient):
         "agreed_terms": True,
         "agreed_privacy": True,
         "agreed_age_14": True,
+        "kakao_id": "approve_kakao",
     })
     res = admin_client.post("/auth/login", json={
         "email": "approve@test.com", "password": "password123"
@@ -224,6 +228,7 @@ def test_admin_can_fetch_verification_image(admin_client: TestClient):
         "agreed_terms": True,
         "agreed_privacy": True,
         "agreed_age_14": True,
+        "kakao_id": "imgstudent_kakao",
     })
     res = admin_client.post("/auth/login", json={
         "email": "imgstudent@test.com", "password": "password123"
@@ -269,6 +274,7 @@ def _upload_as_student(admin_client: TestClient, email: str) -> int:
         "agreed_terms": True,
         "agreed_privacy": True,
         "agreed_age_14": True,
+        "kakao_id": "student_kakao",
     })
     res = admin_client.post("/auth/login", json={
         "email": email, "password": "password123"

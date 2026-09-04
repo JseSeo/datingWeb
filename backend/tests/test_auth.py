@@ -11,6 +11,7 @@ def test_register_new_user(client: TestClient):
         "agreed_terms": True,
         "agreed_privacy": True,
         "agreed_age_14": True,
+        "kakao_id": "test_kakao",
     })
     assert response.status_code == 201
     data = response.json()
@@ -29,6 +30,7 @@ def test_register_duplicate_email(client: TestClient):
         "agreed_terms": True,
         "agreed_privacy": True,
         "agreed_age_14": True,
+        "kakao_id": "dup_kakao",
     }
     client.post("/auth/register", json=payload)
     response = client.post("/auth/register", json=payload)
@@ -59,6 +61,7 @@ def test_login_success(client: TestClient):
         "agreed_terms": True,
         "agreed_privacy": True,
         "agreed_age_14": True,
+        "kakao_id": "login_kakao",
     })
     response = client.post("/auth/login", json={
         "email": "login@korea.ac.kr",
@@ -80,6 +83,7 @@ def test_login_wrong_password(client: TestClient):
         "agreed_terms": True,
         "agreed_privacy": True,
         "agreed_age_14": True,
+        "kakao_id": "wrong_kakao",
     })
     response = client.post("/auth/login", json={
         "email": "wrong@korea.ac.kr",
@@ -110,6 +114,7 @@ def _full_payload(**overrides):
         "agreed_terms": True,
         "agreed_privacy": True,
         "agreed_age_14": True,
+        "kakao_id": "consent_kakao",
     }
     base.update(overrides)
     return base
@@ -145,6 +150,7 @@ def test_register_persists_gender(client: TestClient):
         "agreed_terms": True,
         "agreed_privacy": True,
         "agreed_age_14": True,
+        "kakao_id": "gender_kakao",
     })
     assert res.status_code == 201
     assert res.json()["gender"] == "female"

@@ -34,6 +34,9 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
         university=payload.university,
         gender=payload.gender,
         terms_agreed_at=datetime.utcnow(),
+        instagram=payload.instagram,
+        kakao_id=payload.kakao_id,
+        phone=payload.phone,
     )
     db.add(user)
     db.commit()

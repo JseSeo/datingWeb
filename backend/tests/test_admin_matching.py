@@ -65,6 +65,7 @@ def test_normal_user_is_forbidden(client: TestClient):
         "email": "normal@test.com", "password": "password123", "name": "김일반",
         "university": "서울대학교", "gender": "male",
         "agreed_terms": True, "agreed_privacy": True, "agreed_age_14": True,
+        "kakao_id": "normal_kakao",
     })
     token = client.post("/auth/login", json={
         "email": "normal@test.com", "password": "password123",

@@ -114,6 +114,7 @@ def test_non_admin_is_forbidden(client: TestClient):
         "email": "plain@test.com", "password": "password123", "name": "김일반",
         "university": SNU, "gender": "male",
         "agreed_terms": True, "agreed_privacy": True, "agreed_age_14": True,
+        "kakao_id": "plain_kakao",
     })
     token = client.post("/auth/login", json={
         "email": "plain@test.com", "password": "password123",

@@ -8,6 +8,7 @@ def _register(client: TestClient, university: str, email: str = "v@test.com"):
         "email": email, "password": "password123", "name": "검증",
         "university": university, "gender": "male",
         "agreed_terms": True, "agreed_privacy": True, "agreed_age_14": True,
+        "kakao_id": "verify_kakao",
     })
 
 

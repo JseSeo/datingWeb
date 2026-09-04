@@ -129,6 +129,7 @@ def _headers(client: TestClient, email: str = "catalog@test.com") -> dict:
         "agreed_terms": True,
         "agreed_privacy": True,
         "agreed_age_14": True,
+        "kakao_id": "register_kakao",
     })
     res = client.post("/auth/login", json={"email": email, "password": "password123"})
     return {"Authorization": f"Bearer {res.json()['access_token']}"}
