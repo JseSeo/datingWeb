@@ -34,6 +34,7 @@ export function UniversitySelect({
       <label htmlFor={id} className={styles.label}>{label}</label>
       <select
         id={id}
+        className={styles.input}
         value={value}
         required={required}
         onChange={(e) => onChange(e.target.value)}

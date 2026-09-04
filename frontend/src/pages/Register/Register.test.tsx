@@ -78,6 +78,17 @@ describe("Register 동의 게이트", () => {
       }),
     ));
   });
+
+  it("이메일이 비면 제출을 막고 커스텀 에러를 보여준다 (noValidate 경로 검증)", async () => {
+    const spy = vi.spyOn(api, "registerUser").mockResolvedValue({} as never);
+    renderRegister();
+    await screen.findByRole("combobox", { name: "학교" });
+    fireEvent.click(screen.getByLabelText("전체 동의"));
+    fireEvent.click(screen.getByLabelText("남"));
+    fireEvent.click(screen.getByRole("button", { name: "가입하기" }));
+    expect(await screen.findByText("올바른 이메일을 입력하세요")).toBeInTheDocument();
+    expect(spy).not.toHaveBeenCalled();
+  });
 });
 
 describe("Register 학교", () => {
