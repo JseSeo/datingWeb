@@ -12,16 +12,26 @@
 from app.models.university import University
 from tests.conftest import TestingSessionLocal
 
+# 아래 두 테스트는 정의 순서에 결합돼 있다 (누수 → 다음 테스트가 깨끗한 시드를 받는지).
+# 순서가 바뀌면 조용히 무의미해지는 대신 이 플래그가 시끄럽게 실패시킨다.
+_leaked = False
+
 
 def test_leaked_write_transaction_does_not_break_teardown():
     """커밋도 close도 하지 않은 채 세션을 버린다 (assert 실패 시의 실제 상태)."""
+    global _leaked
     db = TestingSessionLocal()
     db.add(University(name="누수대"))
     db.flush()  # 쓰기 락을 잡는다. 일부러 close()하지 않는다
+    _leaked = True
 
 
 def test_next_test_gets_a_clean_seed():
     """앞 테스트의 누수에도 시드가 한 번만 들어가야 한다."""
+    assert _leaked, (
+        "앞 테스트(test_leaked_write_transaction_does_not_break_teardown)가 "
+        "먼저 실행돼야 이 검증이 의미가 있다 — 실행 순서가 바뀌었다"
+    )
     db = TestingSessionLocal()
     try:
         names = [u.name for u in db.query(University).all()]
