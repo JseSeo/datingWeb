@@ -2,11 +2,13 @@
 
 판정은 run_due_once에 모아 now를 주입받는다 — 루프에는 테스트할 것이 남지 않는다.
 """
+import asyncio
 import logging
 from datetime import datetime, timedelta
 
 from sqlalchemy.orm import Session
 
+from app.database import SessionLocal
 from app.models.match import MatchRound, RoundStatus
 from app.services.matching import RoundNotPending, run_matching
 
@@ -62,3 +64,25 @@ def _record_error(db: Session, round_id: int, message: str) -> None:
         synchronize_session=False,
     )
     db.commit()
+
+
+def _tick() -> None:
+    """폴링 한 번. 세션을 매번 새로 연다 — 하나를 몇 주씩 붙들면 끊긴 채로 남는다."""
+    db = SessionLocal()
+    try:
+        run_due_once(db, datetime.utcnow())
+    finally:
+        db.close()
+
+
+async def scheduler_loop() -> None:
+    """앱이 사는 동안 도는 루프. 예외가 나도 죽지 않는다 —
+    한 번의 실패로 루프가 끝나면 그 뒤 모든 예약이 조용히 사라진다."""
+    while True:
+        # 먼저 자고 나중에 일한다. 부팅 직후(마이그레이션 전일 수 있다) 매칭을 돌리지 않는다
+        await asyncio.sleep(POLL_INTERVAL)
+        try:
+            # run_matching은 동기 함수고 최장 131초다. 직접 await 하면 그동안 API가 멈춘다
+            await asyncio.to_thread(_tick)
+        except Exception:
+            logger.exception("스케줄러 점검 실패 — 다음 주기에 다시 시도한다")

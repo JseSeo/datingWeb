@@ -141,3 +141,22 @@ def test_processes_multiple_due_rounds(db):
     run_due_once(db, BASE)
     assert _status(db, first) == RoundStatus.done
     assert _status(db, second) == RoundStatus.done
+
+
+def test_tick_opens_a_session_and_calls_run_due_once(monkeypatch):
+    """루프가 판정 함수에 세션과 현재 시각을 넘기는 이음매만 확인한다.
+    루프 자체(asyncio.sleep)는 타이밍 테스트가 flaky해지므로 테스트하지 않는다."""
+    calls = []
+
+    def spy(db, now):
+        calls.append((db, now))
+
+    monkeypatch.setattr(scheduler, "run_due_once", spy)
+    monkeypatch.setattr(scheduler, "SessionLocal", TestingSessionLocal)
+
+    scheduler._tick()
+
+    assert len(calls) == 1
+    db, now = calls[0]
+    assert isinstance(db, Session)
+    assert isinstance(now, datetime)
