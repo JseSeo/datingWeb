@@ -2,6 +2,7 @@
 from datetime import datetime, timedelta
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.models.match import MatchRound, RoundStatus
@@ -171,6 +172,30 @@ def test_processes_multiple_due_rounds(db):
     run_due_once(db, BASE)
     assert _status(db, first) == RoundStatus.done
     assert _status(db, second) == RoundStatus.done
+
+
+def test_rescheduled_round_with_cleared_error_is_picked_up_again(
+    db, admin_client: TestClient
+):
+    """놓쳐서 last_error가 찍힌 라운드를 관리자가 PUT으로 미래에 재예약하면
+    (last_error가 함께 지워지면) 그 시각에 스케줄러가 실제로 다시 집어간다.
+    지우지 않으면 재시도 금지 필터에 걸려 영구 제외된다 — 그 결함이 닫혔다는 증거."""
+    round_id = _round(db, BASE, status=RoundStatus.pending)
+    run_due_once(db, BASE + timedelta(minutes=61))
+    assert _error(db, round_id) == MISSED_MESSAGE
+    assert _status(db, round_id) == RoundStatus.pending
+
+    new_when = BASE + timedelta(days=7)
+    res = admin_client.put(
+        f"/admin/match-rounds/{round_id}",
+        json={"scheduled_at": new_when.isoformat()},
+    )
+    assert res.status_code == 200
+
+    db.expire_all()
+    run_due_once(db, new_when)
+    assert _status(db, round_id) == RoundStatus.done
+    assert _error(db, round_id) is None
 
 
 def test_tick_opens_a_session_and_calls_run_due_once(monkeypatch):

@@ -227,6 +227,28 @@ def test_update_rejects_running_round(admin_client: TestClient):
     assert res.json()["detail"] == "실행 중인 라운드는 수정할 수 없습니다"
 
 
+def test_update_clears_last_error(admin_client: TestClient):
+    """일정을 다시 잡는 것은 '다시 시도하겠다'는 뜻이다. 안 지우면 재시도 금지
+    필터에 걸려 미래로 옮긴 라운드가 스케줄러에서 영구 제외된다."""
+    [round_id] = _add_rounds(
+        MatchRound(
+            scheduled_at=_hours(-24),
+            status=RoundStatus.pending,
+            last_error="예정 시각을 놓쳐 자동 실행되지 않았습니다. 수동으로 실행해주세요",
+        )
+    )
+    res = admin_client.put(
+        f"/admin/match-rounds/{round_id}", json={"scheduled_at": _iso(48)}
+    )
+    assert res.status_code == 200
+    assert res.json()["last_error"] is None
+
+    db = TestingSessionLocal()
+    stored = db.get(MatchRound, round_id)
+    db.close()
+    assert stored.last_error is None
+
+
 def test_update_missing_round_returns_404(admin_client: TestClient):
     res = admin_client.put(
         "/admin/match-rounds/9999", json={"scheduled_at": _iso(24)}
@@ -444,6 +466,26 @@ def test_reset_allows_just_after_the_grace_period_ends(admin_client: TestClient)
     res = admin_client.post(f"/admin/match-rounds/{round_id}/reset")
     assert res.status_code == 200
     assert res.json()["status"] == "pending"
+
+
+def test_reset_clears_last_error(admin_client: TestClient):
+    """자동 실패 → 관리자가 수동 실행 → 서버가 도중에 죽어 running에 멈춘 경우처럼,
+    reset 대상 라운드에 옛 last_error가 남아 있을 수 있다. reset도 '다시 시도하겠다'는
+    뜻이므로 지운다 — 안 지우면 되돌린 라운드가 재시도 금지 필터에 영구 제외된다."""
+    [round_id] = _add_rounds(MatchRound(
+        scheduled_at=_hours(-1),
+        status=RoundStatus.running,
+        started_at=_minutes_ago(20),
+        last_error="ValueError: 뭔가 터짐",
+    ))
+    res = admin_client.post(f"/admin/match-rounds/{round_id}/reset")
+    assert res.status_code == 200
+    assert res.json()["last_error"] is None
+
+    db = TestingSessionLocal()
+    stored = db.get(MatchRound, round_id)
+    db.close()
+    assert stored.last_error is None
 
 
 def test_admin_list_exposes_last_error(admin_client: TestClient):

@@ -139,6 +139,7 @@ def update_round(
     _reject_past(scheduled_at)
     _reject_duplicate(db, scheduled_at, exclude_id=round_id)
     round_.scheduled_at = scheduled_at
+    round_.last_error = None  # 일정을 다시 잡았다 = 다시 시도하겠다는 뜻
     _commit_or_conflict(db)
     db.refresh(round_)
     return round_
@@ -191,6 +192,7 @@ def reset_round(
                 ),
             )
     round_.status = RoundStatus.pending
+    round_.last_error = None  # 되돌렸다 = 다시 시도하겠다는 뜻
     db.commit()
     db.refresh(round_)
     return round_
