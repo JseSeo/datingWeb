@@ -27,6 +27,9 @@ class MatchRound(Base):
     status: Mapped[RoundStatus] = mapped_column(
         Enum(RoundStatus, name="round_status"), default=RoundStatus.pending, nullable=False
     )
+    # 마지막 자동 실행이 실패했거나 유예를 넘겨 건너뛴 사유. 성공하면 지워진다.
+    # 값이 차 있으면 스케줄러가 그 라운드를 다시 잡지 않는다 = 재시도 금지의 구현
+    last_error: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     matches: Mapped[list["Match"]] = relationship("Match", back_populates="round")
 

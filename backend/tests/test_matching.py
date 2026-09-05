@@ -665,3 +665,25 @@ def test_failed_run_does_not_revert_a_round_that_was_reset_and_rerun():
     assert db.get(MatchRound, round_.id).status == RoundStatus.done
     assert db.query(Match).filter(Match.match_round_id == round_.id).count() == 1
     db.close()
+
+
+def test_successful_run_clears_last_error():
+    """수동으로 되살린 라운드의 done 카드에 옛 실패 문구가 남으면 안 된다."""
+    db = TestingSessionLocal()
+    round_ = MatchRound(
+        scheduled_at=datetime.utcnow(),
+        status=RoundStatus.pending,
+        last_error="이전 실행 실패",
+    )
+    db.add(round_)
+    db.commit()
+    round_id = round_.id
+
+    # 유저 풀이 비어 있어도 매칭은 정상 종료한다 (0쌍) — optimal_pairs가 빈 입력을 걸러낸다
+    matching.run_matching(db, round_id)
+
+    db.expire_all()
+    saved = db.get(MatchRound, round_id)
+    assert saved.status == RoundStatus.done
+    assert saved.last_error is None
+    db.close()

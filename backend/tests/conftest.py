@@ -5,6 +5,11 @@ from sqlalchemy.orm import sessionmaker
 
 from app.database import Base, get_db
 from app.main import app
+from app.config import settings
+
+# 테스트에서 백그라운드 루프를 띄우지 않는다. TestClient가 lifespan을 실행하므로
+# 이 줄이 없으면 모든 테스트가 60초 타이머 태스크를 하나씩 남긴다
+settings.scheduler_enabled = False
 
 TEST_DATABASE_URL = "sqlite:///./test.db"
 
