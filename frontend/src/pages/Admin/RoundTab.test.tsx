@@ -53,7 +53,7 @@ describe("RoundTab", () => {
   it("생성 — KST 입력을 UTC ISO로 바꿔 보내고 목록에 반영", async () => {
     vi.spyOn(api, "listMatchRounds").mockResolvedValue([]);
     const created: AdminMatchRoundOut = {
-      id: 3,
+      id: 4,
       scheduled_at: "2026-09-01T12:00:00",
       status: "pending",
       last_error: null,
@@ -297,8 +297,9 @@ describe("매칭 실행", () => {
 });
 
 describe("라운드 되돌리기", () => {
+  // pending(1)·done(2)와 같은 목록에 함께 렌더된다 — id가 겹치면 React key가 중복된다
   const running: AdminMatchRoundOut = {
-    id: 1,
+    id: 5,
     scheduled_at: "2026-09-01T10:00:00",
     status: "running",
     last_error: null,
@@ -326,7 +327,7 @@ describe("라운드 되돌리기", () => {
 
     await waitFor(() => expect(screen.getByText("예정")).toBeInTheDocument());
     expect(screen.queryByText("실행중")).toBeNull();
-    expect(spy).toHaveBeenCalledWith(1);
+    expect(spy).toHaveBeenCalledWith(5);
   });
 
   it("confirm 취소 시 요청을 보내지 않는다", async () => {
