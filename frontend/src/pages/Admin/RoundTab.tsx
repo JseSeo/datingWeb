@@ -186,6 +186,9 @@ export default function RoundTab() {
           ) : (
             <>
               <div className={styles.name}>{formatKST(round.scheduled_at)}</div>
+              {round.last_error && (
+                <p className={styles.error}>{round.last_error}</p>
+              )}
               {round.status === "pending" && (
                 <div className={styles.actions}>
                   <Button onClick={() => handleRun(round.id)} disabled={running === round.id}>

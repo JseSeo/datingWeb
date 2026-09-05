@@ -9,12 +9,21 @@ const pending: AdminMatchRoundOut = {
   id: 1,
   scheduled_at: "2026-08-20T12:00:00",  // KST 21:00
   status: "pending",
+  last_error: null,
 };
 
 const done: AdminMatchRoundOut = {
   id: 2,
   scheduled_at: "2026-08-06T12:00:00",
   status: "done",
+  last_error: null,
+};
+
+const failed: AdminMatchRoundOut = {
+  id: 3,
+  scheduled_at: "2026-08-13T12:00:00",
+  status: "pending",
+  last_error: "예정 시각을 놓쳐 자동 실행되지 않았습니다. 수동으로 실행해주세요",
 };
 
 beforeEach(() => vi.clearAllMocks());
@@ -47,6 +56,7 @@ describe("RoundTab", () => {
       id: 3,
       scheduled_at: "2026-09-01T12:00:00",
       status: "pending",
+      last_error: null,
     };
     const spy = vi.spyOn(api, "createMatchRound").mockResolvedValue(created);
     render(<RoundTab />);
@@ -185,12 +195,33 @@ describe("RoundTab", () => {
     );
     expect(screen.queryByText("예정된 라운드 없음")).toBeNull();
   });
+
+  it("자동 실행 실패 사유를 카드에 표시한다", async () => {
+    vi.spyOn(api, "listMatchRounds").mockResolvedValue([failed]);
+    render(<RoundTab />);
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          "예정 시각을 놓쳐 자동 실행되지 않았습니다. 수동으로 실행해주세요",
+        ),
+      ).toBeInTheDocument(),
+    );
+    // 폴백 수단이 남아 있어야 한다
+    expect(screen.getByRole("button", { name: "매칭 실행" })).toBeInTheDocument();
+  });
+
+  it("last_error가 없으면 아무 문구도 뜨지 않는다", async () => {
+    vi.spyOn(api, "listMatchRounds").mockResolvedValue([pending]);
+    render(<RoundTab />);
+    await waitFor(() => screen.getByText("2026-08-20 21:00"));
+    expect(screen.queryByText(/자동 실행되지 않았습니다/)).not.toBeInTheDocument();
+  });
 });
 
 describe("매칭 실행", () => {
   it("pending 라운드에 실행 버튼이 있고, 누르면 결과 요약이 보인다", async () => {
     vi.spyOn(api, "listMatchRounds").mockResolvedValue([
-      { id: 1, scheduled_at: "2026-09-01T10:00:00", status: "pending" },
+      { id: 1, scheduled_at: "2026-09-01T10:00:00", status: "pending", last_error: null },
     ]);
     vi.spyOn(api, "runMatchRound").mockResolvedValue({
       matched: 12, unmatched: 3, guaranteed: 2,
@@ -208,7 +239,7 @@ describe("매칭 실행", () => {
 
   it("확인 창에서 취소하면 실행하지 않는다", async () => {
     vi.spyOn(api, "listMatchRounds").mockResolvedValue([
-      { id: 1, scheduled_at: "2026-09-01T10:00:00", status: "pending" },
+      { id: 1, scheduled_at: "2026-09-01T10:00:00", status: "pending", last_error: null },
     ]);
     const spy = vi.spyOn(api, "runMatchRound");
     vi.spyOn(window, "confirm").mockReturnValue(false);
@@ -221,7 +252,7 @@ describe("매칭 실행", () => {
 
   it("done 라운드에는 실행 버튼이 없다", async () => {
     vi.spyOn(api, "listMatchRounds").mockResolvedValue([
-      { id: 1, scheduled_at: "2026-09-01T10:00:00", status: "done" },
+      { id: 1, scheduled_at: "2026-09-01T10:00:00", status: "done", last_error: null },
     ]);
 
     render(<RoundTab />);
@@ -231,7 +262,7 @@ describe("매칭 실행", () => {
 
   it("실행 요청이 도는 동안 수정·삭제 버튼이 잠긴다", async () => {
     vi.spyOn(api, "listMatchRounds").mockResolvedValue([
-      { id: 1, scheduled_at: "2026-09-01T10:00:00", status: "pending" },
+      { id: 1, scheduled_at: "2026-09-01T10:00:00", status: "pending", last_error: null },
     ]);
     // 요청이 끝나지 않은 상태를 만든다 — 그동안 로컬 status는 아직 "pending"이다
     vi.spyOn(api, "runMatchRound").mockReturnValue(new Promise(() => {}));
@@ -249,7 +280,7 @@ describe("매칭 실행", () => {
 
   it("실행 실패 메시지를 보여준다", async () => {
     vi.spyOn(api, "listMatchRounds").mockResolvedValue([
-      { id: 1, scheduled_at: "2026-09-01T10:00:00", status: "pending" },
+      { id: 1, scheduled_at: "2026-09-01T10:00:00", status: "pending", last_error: null },
     ]);
     vi.spyOn(api, "runMatchRound").mockRejectedValue(
       new ApiError(409, "이미 실행 중이거나 완료된 라운드입니다"),
@@ -270,6 +301,7 @@ describe("라운드 되돌리기", () => {
     id: 1,
     scheduled_at: "2026-09-01T10:00:00",
     status: "running",
+    last_error: null,
   };
 
   it("running 라운드에만 되돌리기 버튼이 있다", async () => {

@@ -135,6 +135,8 @@ export interface AdminMatchRoundOut {
   id: number;
   scheduled_at: string;
   status: "pending" | "running" | "done";
+  /** 마지막 자동 실행 실패·놓침 사유. 성공하면 null로 돌아온다 */
+  last_error: string | null;
 }
 
 export interface MatchingRunOut {
