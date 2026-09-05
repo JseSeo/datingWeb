@@ -135,6 +135,36 @@ def test_round_not_pending_is_silent(db, monkeypatch):
     assert _error(db, round_id) is None
 
 
+def test_error_is_not_written_if_round_finished_meanwhile(db, monkeypatch):
+    """_record_error가 UPDATE를 쏘기 전, 그 사이 라운드가 done이 됐다면 쓰면 안 된다.
+
+    due 목록은 미리 굳힌 것이라, 앞선 라운드의 run_matching이 오래 걸리는 동안
+    관리자가 뒤 라운드를 수동으로 done까지 돌릴 수 있다. done은 재실행이 불가능하므로
+    last_error가 한 번 잘못 찍히면 지울 방법이 없다 (F1 회귀 테스트).
+
+    first를 처리하다 second를 done으로 바꿔놓고, 그 다음 second 처리도 실패로
+    떨어지게 만든다 — 가드가 없으면 이미 done인 second에 last_error가 그대로 찍힌다.
+    """
+    first = _round(db, BASE - timedelta(minutes=5), status=RoundStatus.pending)
+    second = _round(db, BASE - timedelta(minutes=3), status=RoundStatus.pending)
+
+    def boom(inner_db, round_id):
+        if round_id == first:
+            # first를 처리하는 실제 run_matching이 오래 걸리는 동안 관리자가
+            # second를 수동으로 끝까지 돌렸다고 가정한다
+            inner_db.query(MatchRound).filter(MatchRound.id == second).update(
+                {MatchRound.status: RoundStatus.done}
+            )
+            inner_db.commit()
+        raise ValueError("점수 계산 폭발")
+
+    monkeypatch.setattr(scheduler, "run_matching", boom)
+    run_due_once(db, BASE)
+
+    assert _status(db, second) == RoundStatus.done
+    assert _error(db, second) is None
+
+
 def test_processes_multiple_due_rounds(db):
     first = _round(db, BASE - timedelta(minutes=30), status=RoundStatus.pending)
     second = _round(db, BASE - timedelta(minutes=10), status=RoundStatus.pending)

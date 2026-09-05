@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
 from app.models.match import MatchRound, RoundStatus
-from app.services.matching import RoundNotPending, run_matching
+from app.services.matching import RoundNotFound, RoundNotPending, run_matching
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +47,9 @@ def run_due_once(db: Session, now: datetime) -> None:
         except RoundNotPending:
             # 다른 워커가 먼저 선점했다. 그쪽이 정상 실행 중이므로 에러가 아니다
             logger.info("라운드 %s는 이미 다른 실행이 선점했다", round_id)
+        except RoundNotFound:
+            # due 조회 이후 라운드가 삭제됐다. 기록할 대상 자체가 없다 — 에러가 아니다
+            logger.info("라운드 %s는 삭제되어 더 이상 존재하지 않는다", round_id)
         except Exception as exc:
             logger.exception("라운드 %s 자동 실행 실패", round_id)
             _record_error(db, round_id, f"{type(exc).__name__}: {exc}")
@@ -57,9 +60,18 @@ def _record_error(db: Session, round_id: int, message: str) -> None:
 
     run_matching이 실패하며 세션을 rollback 해둔 상태라, 그 위에 얹지 않고
     UPDATE 하나로 새로 쓴다. status는 건드리지 않는다 — 실패한 라운드는 여전히 pending이다.
+    (유예 초과로 호출된 경우는 run_matching이 아예 불리지 않았으므로 이 rollback은 아무 것도
+    되돌리지 않는 무해한 no-op이다.)
     """
     db.rollback()
-    db.query(MatchRound).filter(MatchRound.id == round_id).update(
+    # status == pending 가드: due 목록은 미리 굳혀둔 것이라 이 UPDATE가 실행될 때는
+    # 이미 최대 131초(run_matching 최장 실행)가 지났을 수 있다. 그 사이 관리자가 수동으로
+    # 이 라운드를 done까지 돌렸다면 pending이 아니므로 여기서 덮어쓰지 않는다 — done은
+    # 재실행이 불가능해 last_error가 한 번 잘못 찍히면 지울 방법이 없다.
+    db.query(MatchRound).filter(
+        MatchRound.id == round_id,
+        MatchRound.status == RoundStatus.pending,
+    ).update(
         {MatchRound.last_error: message[:_ERROR_MAX]},
         synchronize_session=False,
     )
