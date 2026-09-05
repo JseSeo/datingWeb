@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import close_all_sessions, sessionmaker
 
 from app.database import Base, get_db
 from app.main import app
@@ -41,10 +41,17 @@ def setup_db():
     from app.models.university import University
 
     db = TestingSessionLocal()
-    db.add_all([University(name=name) for name in BASELINE_UNIVERSITIES])
-    db.commit()
-    db.close()
+    try:
+        db.add_all([University(name=name) for name in BASELINE_UNIVERSITIES])
+        db.commit()
+    finally:
+        db.close()
     yield
+    # 테스트가 세션을 닫지 않고 끝나면(assert 실패로 close()에 도달 못 하는 게 흔하다)
+    # 열린 쓰기 트랜잭션이 drop_all을 막는다. 테이블이 남은 채 다음 테스트가 시드를
+    # 다시 넣어 UNIQUE constraint failed: universities.name로 터지고, 원인과 상관없는
+    # 테스트가 ERROR로 뜬다. 남은 세션을 먼저 정리해 그 연쇄를 끊는다.
+    close_all_sessions()
     Base.metadata.drop_all(bind=engine)
 
 
