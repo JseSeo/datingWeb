@@ -64,7 +64,8 @@ class MatchingUniversityWeight(Base):
     유니크 인덱스에서 NULL을 서로 다른 값으로 봐서 같은 대학에 규칙이 여러 번 들어가고,
     그 값들이 합산돼 매칭 전체가 한쪽으로 쏠린다.
 
-    대학명은 자유 텍스트다 — User.university와 같은 취급이다 (대학 목록은 팀 미결).
+    컬럼은 자유 텍스트지만 등록·수정 API가 universities 테이블 기준으로 검증한다
+    (require_known). User.university와 같은 취급이다.
     """
 
     __tablename__ = "matching_university_weights"
