@@ -244,8 +244,9 @@ async def lifespan(app: FastAPI):
 
 | 파일 | 추가 |
 |------|------|
-| `backend/tests/test_admin_rounds.py` | 응답에 `last_error` 포함 1건 |
+| `backend/tests/test_admin_rounds.py` | 응답에 `last_error` 포함 1건, `update_round` 초기화 1건, `reset_round` 초기화 1건 |
 | `backend/tests/test_matching.py` | 실행 성공 시 `last_error` 초기화 1건 |
+| `backend/tests/test_scheduler.py` | 재예약 라운드 재실행 E2E 1건 |
 | `frontend/src/pages/Admin/RoundTab.test.tsx` | `last_error` 있는 카드에 문구 렌더 1건 |
 
 **`scheduler_loop`은 테스트하지 않는다.** `asyncio.sleep` 타이밍 테스트는 반드시 flaky해진다.
