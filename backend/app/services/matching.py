@@ -387,6 +387,7 @@ def _execute(db: Session, round_: MatchRound) -> MatchingResult:
 
     round_.status = RoundStatus.done
     round_.executed_at = datetime.utcnow()
+    round_.last_error = None  # 성공했으니 옛 실패 사유를 지운다 (자동·수동 공통)
     return MatchingResult(
         matched=len(pairs),
         unmatched=len(pool) - len(matched_ids),

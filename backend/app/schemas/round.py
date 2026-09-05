@@ -22,5 +22,7 @@ class AdminMatchRoundOut(BaseModel):
     id: int
     scheduled_at: datetime
     status: RoundStatus
+    # 마지막 자동 실행 실패·놓침 사유. 유저용 MatchRoundOut에는 넣지 않는다 (관리자 정보)
+    last_error: str | None = None
 
     model_config = ConfigDict(from_attributes=True)

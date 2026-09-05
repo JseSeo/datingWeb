@@ -60,7 +60,7 @@ def test_list_returns_all_rounds_newest_first(admin_client: TestClient):
     assert [r["scheduled_at"] for r in data] == sorted(
         [r["scheduled_at"] for r in data], reverse=True
     )
-    assert set(data[0].keys()) == {"id", "scheduled_at", "status"}
+    assert set(data[0].keys()) == {"id", "scheduled_at", "status", "last_error"}
 
 
 def test_create_returns_201_with_pending_status(admin_client: TestClient):
@@ -444,3 +444,22 @@ def test_reset_allows_just_after_the_grace_period_ends(admin_client: TestClient)
     res = admin_client.post(f"/admin/match-rounds/{round_id}/reset")
     assert res.status_code == 200
     assert res.json()["status"] == "pending"
+
+
+def test_admin_list_exposes_last_error(admin_client: TestClient):
+    _add_rounds(
+        MatchRound(
+            scheduled_at=_hours(-3),
+            status=RoundStatus.pending,
+            last_error="ValueError: 뭔가 터짐",
+        ),
+    )
+    res = admin_client.get("/admin/match-rounds")
+    assert res.status_code == 200
+    assert res.json()[0]["last_error"] == "ValueError: 뭔가 터짐"
+
+
+def test_admin_list_last_error_is_null_by_default(admin_client: TestClient):
+    _add_rounds(MatchRound(scheduled_at=_hours(24), status=RoundStatus.pending))
+    res = admin_client.get("/admin/match-rounds")
+    assert res.json()[0]["last_error"] is None
