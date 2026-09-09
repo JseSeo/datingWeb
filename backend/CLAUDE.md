@@ -9,7 +9,10 @@ uv run uvicorn app.main:app --reload        # 개발 서버 (포트 8000)
 uv run pytest -v                            # 테스트
 uv run alembic revision --autogenerate -m "설명"  # 마이그레이션 생성
 uv run alembic upgrade head                 # 마이그레이션 적용
+uv run python -m app.seed_admin             # 관리자 계정 시드 (.env의 ADMIN_* 필요)
 ```
+
+`.env`는 git에 안 올라간다. 새 환경에서는 `.env.example`을 복사해 값을 채운다.
 
 ## 코드 구조
 
